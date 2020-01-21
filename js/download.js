@@ -41,8 +41,7 @@ setInterval(() => {
         })
         .then(
             () => { // onsuccess
-                console.log("success cursor.primaryKey", cursor.primaryKey);
-                console.log("success cursor.key", cursor.key);
+                // todo: [2-1]
             },
             () => { // onerror
                 console.log("failed to download '" + cursor.value.filename + "' from url: ", cursor.value.url); 

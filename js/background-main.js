@@ -11,3 +11,4 @@ var dbVersion = 1;
  /* download */
 var concurrentDownloads = 1;
 var downloadInterval = 6000; // ms
+var downloadPrefix = 'patreon/';

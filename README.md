@@ -11,7 +11,7 @@ Go to https://addons.mozilla.org/firefox/addon/patreon-helper/ and click "Add to
 
 # Usage
 Simply browse any feed on Patreon (e.g. your home feed). Files will be downloaded
-in the background under `patreon-downloads` within your configured download
+in the background under `patreon` within your configured download
 directory.
 Note that downloads are slowed down to one file every few seconds to reduce server load for Patreon.
 

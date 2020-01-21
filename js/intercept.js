@@ -4,7 +4,11 @@
  * 	draconigen@gmail.com
  */
 
-var streamUrl = '*://*.patreon.com/api/stream*';
+var streamUrls = [
+    '*://*.patreon.com/api/stream*',
+    '*://*.patreon.com/api/posts*'
+];
+var postsNameRegex = /\/join\/([^\s\/]*)\/*/;
 
 var db;
 var names = {};
@@ -63,6 +67,7 @@ function extractDownloadInfo(response) {
             names[incl.id] = incl.attributes.full_name;
         }
 
+        // /api/stream
         if (incl.type == "media" && incl.attributes.download_url && incl.attributes.file_name) {
 
             /* TODO: artist names are already stored under names[user_id].
@@ -70,17 +75,36 @@ function extractDownloadInfo(response) {
              * change default name below from "patreon-downloads" to "_unknown"
              * and overwrite the name if it's in names.
              */
-            let name = "patreon-downloads";
+            let name = "_unknown";
             // if (names[]) // todo: put in user id in these brackets
             //     name = names[]; // todo: and in these
 
-            if (debug) console.log("found media:", {
+            if (debug) console.log("found media on stream:", {
                 // name: name,
                 file: incl.attributes.file_name,
                 url: incl.attributes.download_url
             });
 
-            addToDownloads(name + "/" + incl.attributes.file_name, incl.attributes.download_url);
+            addToDownloads(downloadPrefix + name + "/" + incl.attributes.file_name, incl.attributes.download_url);
+        }
+
+        // /api/posts
+        if (incl.type == "post" && incl.attributes.post_file.name && incl.attributes.post_file.url) {
+            let match;
+            let name = "_unknown";
+
+            if ((match = postsNameRegex.exec(incl.attributes.upgrade_url)) !== null) {
+                name = match[0];
+                console.log("matches!", match);
+            }
+
+            if (debug) console.log("found media on post:", {
+                name: name,
+                file: incl.attributes.post_file.name,
+                url: incl.attributes.post_file.url
+            });
+
+            addToDownloads(downloadPrefix + name + "/" + incl.attributes.post_file.name, incl.attributes.post_file.url);
         }
     });
 }
@@ -122,7 +146,7 @@ async function addToDownloads(filename, url) {
 
 browser.webRequest.onBeforeRequest.addListener(
     interceptStreamResponse, 
-    {urls: [streamUrl]}, 
+    {urls: streamUrls}, 
     ["blocking"]
 )
 

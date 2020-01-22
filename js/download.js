@@ -1,6 +1,6 @@
 /*	
  *	Patreon Helper for Firefox
- * 	Version 1.0
+ * 	Version 1.1
  * 	draconigen@gmail.com
  */
 
@@ -54,7 +54,7 @@ setInterval(() => {
 
         cursor.continue();
     }
-}, 6000); // 6 sec
+}, 3000); // 3 sec
 
 /*
  *  [1] : potential issue: when different artists or even the same artist uploads an image with the

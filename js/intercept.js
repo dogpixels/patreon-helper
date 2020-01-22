@@ -1,6 +1,6 @@
 /*	
  *	Patreon Helper for Firefox
- * 	Version 1.0
+ * 	Version 1.1
  * 	draconigen@gmail.com
  */
 
@@ -8,7 +8,7 @@ var streamUrls = [
     '*://*.patreon.com/api/stream*',
     '*://*.patreon.com/api/posts*'
 ];
-var postsNameRegex = /\/join\/([^\s\/]*)\/*/;
+var postsNameRegex = /\/join\/(\w+)\/checkout*/;
 
 var db;
 var names = {};
@@ -61,52 +61,56 @@ function decodeStreamResponse(responseDictionary) {
 function extractDownloadInfo(response) {
     if (debug) console.info("scanning data", response);
 
-    response.included.forEach(incl => {
-        if (incl.type == "user" && incl.id && incl.attributes.full_name) {
-            if (debug) console.log("found user '"+ incl.id + "'", incl.attributes.full_name);
-            names[incl.id] = incl.attributes.full_name;
-        }
+    if (response.data) { // /api/posts
+        response.data.forEach(data => {
+            if (data.type == "post" && data.attributes.post_file.name && data.attributes.post_file.url) {
+                let match;
+                let name = "_unknown";
 
-        // /api/stream
-        if (incl.type == "media" && incl.attributes.download_url && incl.attributes.file_name) {
+                if (data.attributes.upgrade_url && (match = postsNameRegex.exec(data.attributes.upgrade_url)) !== null) {
+                    name = match[1];
+                }
 
-            /* TODO: artist names are already stored under names[user_id].
-             * Find out the user_id of the poster of this media, then
-             * change default name below from "patreon-downloads" to "_unknown"
-             * and overwrite the name if it's in names.
-             */
-            let name = "_unknown";
-            // if (names[]) // todo: put in user id in these brackets
-            //     name = names[]; // todo: and in these
+                if (debug) console.log("found media on post:", {
+                    name: name,
+                    file: data.attributes.post_file.name,
+                    url: data.attributes.post_file.url
+                });
 
-            if (debug) console.log("found media on stream:", {
-                // name: name,
-                file: incl.attributes.file_name,
-                url: incl.attributes.download_url
-            });
-
-            addToDownloads(downloadPrefix + name + "/" + incl.attributes.file_name, incl.attributes.download_url);
-        }
-
-        // /api/posts
-        if (incl.type == "post" && incl.attributes.post_file.name && incl.attributes.post_file.url) {
-            let match;
-            let name = "_unknown";
-
-            if ((match = postsNameRegex.exec(incl.attributes.upgrade_url)) !== null) {
-                name = match[0];
-                console.log("matches!", match);
+                addToDownloads(downloadPrefix + name + "/" + data.attributes.post_file.name, data.attributes.post_file.url);
             }
+        });
+    }
 
-            if (debug) console.log("found media on post:", {
-                name: name,
-                file: incl.attributes.post_file.name,
-                url: incl.attributes.post_file.url
-            });
-
-            addToDownloads(downloadPrefix + name + "/" + incl.attributes.post_file.name, incl.attributes.post_file.url);
-        }
-    });
+    else if (response.included) {
+        response.included.forEach(incl => {
+            if (incl.type == "user" && incl.id && incl.attributes.full_name) {
+                if (debug) console.log("found user '"+ incl.id + "'", incl.attributes.full_name);
+                names[incl.id] = incl.attributes.full_name;
+            }
+    
+            // /api/stream
+            if (incl.type == "media" && incl.attributes.download_url && incl.attributes.file_name) {
+    
+                /* TODO: artist names are already stored under names[user_id].
+                 * Find out the user_id of the poster of this media, then
+                 * change default name below from "patreon-downloads" to "_unknown"
+                 * and overwrite the name if it's in names.
+                 */
+                let name = "_unknown";
+                // if (names[]) // todo: put in user id in these brackets
+                //     name = names[]; // todo: and in these
+    
+                if (debug) console.log("found media on stream:", {
+                    // name: name,
+                    file: incl.attributes.file_name,
+                    url: incl.attributes.download_url
+                });
+    
+                addToDownloads(downloadPrefix + name + "/" + incl.attributes.file_name, incl.attributes.download_url);
+            }
+        });
+    }
 }
 
 async function addToDownloads(filename, url) {
@@ -128,7 +132,7 @@ async function addToDownloads(filename, url) {
     let count = await db.transaction("downloads").objectStore("downloads").index("filename").count(IDBKeyRange.only(filename));
 
     count.onsuccess = () => {
-        if (count.result == 0) {
+        if (count.result == 0) { // if not already in db
             if (debug) console.info("adding to db: '" + filename + "'", url);
             
             let op = db.transaction("downloads", "readwrite").objectStore("downloads").add({
@@ -138,7 +142,7 @@ async function addToDownloads(filename, url) {
             });
 
             op.onerror = () => {
-                console.error("error adding entry to database", error); 
+                console.error("error adding entry to database", op.error);
             }
         }
     }

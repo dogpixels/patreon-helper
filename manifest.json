@@ -1,13 +1,15 @@
 {
 	"manifest_version": 2,
 	"name": "Patreon Helper",
-	"version": "1.0",
+	"version": "1.1",
 	"description": "Downloads files in the background as you browser Patreon. Source: https://github.com/dogpixels/patreon-helper",
 	"icons": {
 		"16": "img/pax16.png",
 		"32": "img/pax32.png",
 		"48": "img/pax48.png",
-		"64": "img/pax64.png"
+		"64": "img/pax64.png",
+		"128": "img/pax128.png",
+		"192": "img/pax192.png"
 	},
 	"background": {
 		"scripts": ["js/background-main.js", "js/intercept.js", "js/download.js"]

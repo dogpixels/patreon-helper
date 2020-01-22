@@ -1,6 +1,5 @@
 /*	
  *	Patreon Helper for Firefox
- * 	Version 1.0
  * 	draconigen@gmail.com
  */
 
@@ -12,3 +11,5 @@ var dbVersion = 1;
 var concurrentDownloads = 1;
 var downloadInterval = 6000; // ms
 var downloadPrefix = 'patreon/';
+
+console.info("patreon helper 1.2 loaded; debug: ", debug);

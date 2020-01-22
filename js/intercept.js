@@ -1,6 +1,5 @@
 /*	
  *	Patreon Helper for Firefox
- * 	Version 1.1
  * 	draconigen@gmail.com
  */
 
@@ -14,7 +13,7 @@ var db;
 var names = {};
 
 function interceptStreamResponse(details) {
-    if (debug) console.log("intercepting stream api request '" + details.requestId + "'");
+    if (debug) console.log("intercepting api request '" + details.requestId + "'");
 
     let responseDictionary = {};
     let filter = browser.webRequest.filterResponseData(details.requestId);
@@ -27,7 +26,7 @@ function interceptStreamResponse(details) {
 
         let str = decoder.decode(event.data, {stream: true});
 
-        if (debug) console.info("adding " + str.length + " bytes to response dictionary id " + details.requestId);
+        if (debug) console.info("writing " + str.length + " bytes to response dictionary id " + details.requestId);
 
         responseDictionary[details.requestId] += str;
 
@@ -38,7 +37,6 @@ function interceptStreamResponse(details) {
     // close filter when all data is received
     filter.onstop = () => {
         filter.disconnect();
-
         decodeStreamResponse(responseDictionary);
     }
 }
@@ -61,13 +59,20 @@ function decodeStreamResponse(responseDictionary) {
 function extractDownloadInfo(response) {
     if (debug) console.info("scanning data", response);
 
-    if (response.data) { // /api/posts
+    if (response.hasOwnProperty('data')) { // /api/posts
         response.data.forEach(data => {
-            if (data.type == "post" && data.attributes.post_file.name && data.attributes.post_file.url) {
+            if (
+                data.type == "post" &&
+                data.hasOwnProperty('attributes') &&
+                data.attributes.hasOwnProperty('post_file') &&
+                data.attributes.post_file && // might be null
+                data.attributes.post_file.hasOwnProperty('name') &&
+                data.attributes.post_file.hasOwnProperty('url')
+            ) {
                 let match;
                 let name = "_unknown";
 
-                if (data.attributes.upgrade_url && (match = postsNameRegex.exec(data.attributes.upgrade_url)) !== null) {
+                if (data.attributes.hasOwnProperty('upgrade_url') && (match = postsNameRegex.exec(data.attributes.upgrade_url)) !== null) {
                     name = match[1];
                 }
 
@@ -82,16 +87,25 @@ function extractDownloadInfo(response) {
         });
     }
 
-    else if (response.included) {
+    else if (response.hasOwnProperty('included')) {
         response.included.forEach(incl => {
-            if (incl.type == "user" && incl.id && incl.attributes.full_name) {
+            if (
+                incl.type == "user" && 
+                incl.hasOwnProperty('id') && 
+                incl.hasOwnProperty('attributes') && 
+                incl.attributes.hasOwnProperty('full_name')
+            ) {
                 if (debug) console.log("found user '"+ incl.id + "'", incl.attributes.full_name);
                 names[incl.id] = incl.attributes.full_name;
             }
     
             // /api/stream
-            if (incl.type == "media" && incl.attributes.download_url && incl.attributes.file_name) {
-    
+            if (
+                incl.type == "media" && 
+                incl.hasOwnProperty('attributes') &&
+                incl.attributes.hasOwnProperty('download_url') && 
+                incl.attributes.hasOwnProperty('file_name')
+            ) {
                 /* TODO: artist names are already stored under names[user_id].
                  * Find out the user_id of the poster of this media, then
                  * change default name below from "patreon-downloads" to "_unknown"
@@ -153,5 +167,3 @@ browser.webRequest.onBeforeRequest.addListener(
     {urls: streamUrls}, 
     ["blocking"]
 )
-
-if (debug) console.info("patreon extension loaded");

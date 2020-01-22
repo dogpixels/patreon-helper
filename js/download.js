@@ -1,6 +1,5 @@
 /*	
  *	Patreon Helper for Firefox
- * 	Version 1.1
  * 	draconigen@gmail.com
  */
 

@@ -83,6 +83,12 @@ function extractDownloadInfo(response) {
                 });
 
                 addToDownloads(downloadPrefix + name + "/" + data.attributes.post_file.name, data.attributes.post_file.url);
+
+                if (data.attributes.hasOwnProperty('content') && data.attributes.content != null) {
+                    findMediaUrls(data.attributes.content).forEach(url => {
+                        addToDownloads(downloadPrefix + name + "/" + url.split('/').pop().split('#')[0].split('?')[0], url);
+                    });
+                }
             }
         });
     }
@@ -125,6 +131,27 @@ function extractDownloadInfo(response) {
             }
         });
     }
+}
+
+function findMediaUrls(text) {
+    let ret = [];
+    let regex = /href=\"([^"]+)\"/gi;
+
+    let matches = regex.exec(text);
+
+    if (matches === null)
+        return ret;
+
+    if (debug) console.log("found links in text:", matches);
+
+    matches.forEach(url => {
+        if (mediaExtensions.includes(url.match(/\.([^\s\.]+)$/i)[1]))
+            ret.push(url);
+    });
+
+    if (debug) console.log("extracted media links from text:", ret);
+    
+    return ret;
 }
 
 async function addToDownloads(filename, url) {

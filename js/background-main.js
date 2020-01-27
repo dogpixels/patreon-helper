@@ -19,4 +19,4 @@ var mediaExtensions = [
 	'zip', '7z', 'rar', 'tar.gz', 'z' 																		// compressed files
 ]
 
-console.info("patreon helper 1.2 loaded; debug: ", debug);
+console.info("patreon helper 1.4 loaded; debug: ", debug);

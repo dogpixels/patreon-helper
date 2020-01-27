@@ -59,6 +59,7 @@ function decodeStreamResponse(responseDictionary) {
 function extractDownloadInfo(response) {
     if (debug) console.info("scanning data", response);
 
+    /* search posts for primary media */
     if (response.hasOwnProperty('data')) { // /api/posts
         response.data.forEach(data => {
             if (
@@ -84,16 +85,29 @@ function extractDownloadInfo(response) {
 
                 addToDownloads(downloadPrefix + name + "/" + data.attributes.post_file.name, data.attributes.post_file.url);
 
+                /* search post text for media links */
                 if (data.attributes.hasOwnProperty('content') && data.attributes.content != null) {
                     findMediaUrls(data.attributes.content).forEach(url => {
                         addToDownloads(downloadPrefix + name + "/" + url.split('/').pop().split('#')[0].split('?')[0], url);
+                    });
+                }
+
+                // note content creator name for secondary media (post has multiple media)
+                if (
+                    data.attributes.hasOwnProperty('post_metadata') &&
+                    data.attributes.post_metadata.hasOwnProperty('image_order') &&
+                    data.attributes.post_metadata.image_order
+                ) {
+                    data.attributes.post_metadata.image_order.forEach(id => {
+                        names[id] = name;
                     });
                 }
             }
         });
     }
 
-    else if (response.hasOwnProperty('included')) {
+    /* search stream (home feed) for media */
+    if (response.hasOwnProperty('included')) {
         response.included.forEach(incl => {
             if (
                 incl.type == "user" && 
@@ -108,21 +122,18 @@ function extractDownloadInfo(response) {
             // /api/stream
             if (
                 incl.type == "media" && 
+                incl.hasOwnProperty('id') &&
                 incl.hasOwnProperty('attributes') &&
                 incl.attributes.hasOwnProperty('download_url') && 
                 incl.attributes.hasOwnProperty('file_name')
             ) {
-                /* TODO: artist names are already stored under names[user_id].
-                 * Find out the user_id of the poster of this media, then
-                 * change default name below from "patreon-downloads" to "_unknown"
-                 * and overwrite the name if it's in names.
-                 */
                 let name = "_unknown";
-                // if (names[]) // todo: put in user id in these brackets
-                //     name = names[]; // todo: and in these
+
+                if (names.hasOwnProperty(incl.id))
+                    name = names[incl.id];
     
                 if (debug) console.log("found media on stream:", {
-                    // name: name,
+                    name: name,
                     file: incl.attributes.file_name,
                     url: incl.attributes.download_url
                 });

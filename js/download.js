@@ -56,13 +56,13 @@ setInterval(() => {
 }, 3000); // 3 sec
 
 /*
- *  [1] : potential issue: when different artists or even the same artist uploads an image with the
+ *  [1] : potential issue: when the same artist uploads an image with the
  *  same filename, the second post will be ignored because the unique filename was
- *  already present in database. See notes in background.js to mitigate this issue.
+ *  already present in database.
  *
- *  [2] : a download will be signaled to have been downloaded (state = 1), even though it is not
- *  confirmed that the download has successfully started (see [2-1], which is in 
- *  download().onsuccess method).
+ *  [2] : potential issue: a download will be signaled to have been downloaded (state = 1), 
+ *  even though it is not confirmed that the download has successfully started (see [2-1], 
+ *  which is in download().onsuccess method).
  *  Todo: either run the two lines following [2-2] only, if [2-1] has been run, or move
  *  the lines from below [2-2] to where [2-1] is; however, then cursor.value will be undefined. 
  */

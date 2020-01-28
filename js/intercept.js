@@ -71,7 +71,7 @@ function extractDownloadInfo(response) {
                 data.attributes.post_file.hasOwnProperty('url')
             ) {
                 let match;
-                let name = "_unknown";
+                let name = unknownCreator;
 
                 if (data.attributes.hasOwnProperty('upgrade_url') && (match = postsNameRegex.exec(data.attributes.upgrade_url)) !== null) {
                     name = match[1];
@@ -95,12 +95,50 @@ function extractDownloadInfo(response) {
                 // note content creator name for secondary media (post has multiple media)
                 if (
                     data.attributes.hasOwnProperty('post_metadata') &&
+                    data.attributes.post_metadata &&
                     data.attributes.post_metadata.hasOwnProperty('image_order') &&
                     data.attributes.post_metadata.image_order
                 ) {
                     data.attributes.post_metadata.image_order.forEach(id => {
                         names[id] = name;
                     });
+                }
+
+                // note content creator name for attachments
+                if (
+                    data.hasOwnProperty('relationships') &&
+                    data.relationships
+                ) {
+                    if (
+                        data.relationships.hasOwnProperty('images') &&
+                        data.relationships.images &&
+                        data.relationships.images.hasOwnProperty('data') &&
+                        data.relationships.images.data
+                    ) {
+                        data.relationships.images.data.forEach(dat => {
+                            names[dat.id] = name;
+                        });
+                    }
+                    if (
+                        data.relationships.hasOwnProperty('audio') &&
+                        data.relationships.audio &&
+                        data.relationships.audio.hasOwnProperty('data') &&
+                        data.relationships.audio.data
+                    ) {
+                        data.relationships.audio.data.forEach(dat => {
+                            names[dat.id] = name;
+                        });
+                    }
+                    if (
+                        data.relationships.hasOwnProperty('attachments') &&
+                        data.relationships.attachments &&
+                        data.relationships.attachments.hasOwnProperty('data') &&
+                        data.relationships.attachments.data
+                    ) {
+                        data.relationships.attachments.data.forEach(dat => {
+                            names[dat.id] = name;
+                        });
+                    }
                 }
             }
         });
@@ -122,14 +160,13 @@ function extractDownloadInfo(response) {
             // /api/stream
             if (
                 incl.type == "media" && 
-                incl.hasOwnProperty('id') &&
                 incl.hasOwnProperty('attributes') &&
                 incl.attributes.hasOwnProperty('download_url') && 
                 incl.attributes.hasOwnProperty('file_name')
             ) {
-                let name = "_unknown";
+                let name = unknownCreator;
 
-                if (names.hasOwnProperty(incl.id))
+                if (incl.hasOwnProperty('id') && names.hasOwnProperty(incl.id))
                     name = names[incl.id];
     
                 if (debug) console.log("found media on stream:", {
@@ -139,6 +176,27 @@ function extractDownloadInfo(response) {
                 });
     
                 addToDownloads(downloadPrefix + name + "/" + incl.attributes.file_name, incl.attributes.download_url);
+            }
+
+            // attachments
+            if (
+                incl.type == "attachment" &&
+                incl.hasOwnProperty('attributes') &&
+                incl.attributes.hasOwnProperty('name') &&
+                incl.attributes.hasOwnProperty('url')
+            ) {
+                let name = unknownCreator;
+
+                if (incl.hasOwnProperty('id') && names.hasOwnProperty(incl.id))
+                    name = names[incl.id];
+
+                if (debug) console.log("found attachment:", {
+                    name: name,
+                    file: incl.attributes.name,
+                    url: incl.attributes.url
+                });
+
+                addToDownloads(downloadPrefix + name + "/" + incl.attributes.name, incl.attributes.url);
             }
         });
     }
@@ -168,16 +226,17 @@ function findMediaUrls(text) {
 async function addToDownloads(filename, url) {
     if (typeof db === 'undefined') {
         let dbOpen = window.indexedDB.open("patreonex", dbVersion);
-        
+
         dbOpen.onsuccess = () => {
             db = dbOpen.result;
-            if (debug) console.info("connection to database succeeded");
-        }
-        
+            if (debug)
+                console.info("connection to database succeeded");
+        };
+
         dbOpen.onerror = event => {
             console.error("failed to connect to database", event);
             return;
-        }
+        };
     }
 
     // check if filename already in database, add otherwise
@@ -185,8 +244,10 @@ async function addToDownloads(filename, url) {
 
     count.onsuccess = () => {
         if (count.result == 0) { // if not already in db
-            if (debug) console.info("adding to db: '" + filename + "'", url);
             
+            if (debug)
+                console.info("adding to db: " + filename + ",", url);
+
             let op = db.transaction("downloads", "readwrite").objectStore("downloads").add({
                 filename: filename,
                 url: url,
@@ -194,10 +255,10 @@ async function addToDownloads(filename, url) {
             });
 
             op.onerror = () => {
-                console.error("error adding entry to database", op.error);
-            }
+                console.warn("error adding entry to database", op);
+            };
         }
-    }
+    };   
 }
 
 browser.webRequest.onBeforeRequest.addListener(

@@ -24,4 +24,4 @@ var mediaExtensions = [
 var unknownCreator = "_unknown";
 
 
-console.info("patreon helper 1.4 loaded; debug: ", debug);
+console.info("patreon helper 1.5 loaded; debug: ", debug);

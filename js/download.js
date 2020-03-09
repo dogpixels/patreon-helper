@@ -26,6 +26,8 @@ setInterval(() => {
 
     let i = 0;
     request.onsuccess = (event) => {
+        let downloaded = false;
+
         if (i++ >= concurrentDownloads || !event.target.result)
             return;
 
@@ -50,6 +52,8 @@ setInterval(() => {
                     console.warn("download failed", dl);
                 }
             );
+
+            downloaded = true;
         }
         // something else (e.g. http-302) - open in tab // todo: [3]
         else {
@@ -68,12 +72,15 @@ setInterval(() => {
                         console.warn("failed to open tab for extended download");
                     }
                 )
+                downloaded = true;
             }
         }
         
-        // todo: [2-2]
-        cursor.value.state = 1;
-        cursor.update(cursor.value);
+        if (downloaded) {
+            // todo: [2-2]
+            cursor.value.state = 1;
+            cursor.update(cursor.value);
+        }
 
         cursor.continue();
     }

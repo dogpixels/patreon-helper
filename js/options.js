@@ -6,12 +6,11 @@
 var downloadAttachmentsCheckbox = document.getElementById("downloadAttachments");
 
 browser.runtime.getBackgroundPage().then((backgroundContext) => {
-	console.info("loaded bgcontext", backgroundContext);
-
 	downloadAttachmentsCheckbox.checked = backgroundContext.downloadAttachments;
 
 	downloadAttachmentsCheckbox.addEventListener('change', (event) => {
 		backgroundContext.downloadAttachments = event.target.checked;
+		backgroundContext.updateSettingsStorage();
 	});
 }, (error) => {
 	console.error("error loading background context:", error);

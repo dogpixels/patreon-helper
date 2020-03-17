@@ -1,7 +1,7 @@
 {
 	"manifest_version": 2,
 	"name": "Patreon Helper",
-	"version": "1.6",
+	"version": "1.7",
 	"description": "Downloads files in the background as you browse Patreon. Source: https://github.com/dogpixels/patreon-helper",
 	"icons": {
 		"16": "img/pax16.png",

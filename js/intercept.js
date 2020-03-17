@@ -174,7 +174,17 @@ function extractDownloadInfo(response) {
                     file: incl.attributes.file_name,
                     url: incl.attributes.download_url
                 });
-    
+
+                // workaround for when patreon started to null attributes.file_name somewhen in 03/2020
+                if (incl.attributes.file_name == null) {
+                    if (!useLostAndFound)
+                        return;
+
+                    incl.attributes.file_name = new Date().getTime() + '-' + Math.floor(Math.random() * 1024) + '.jpg';
+                    if (debug) console.warn(name + "/{file_name} was null, replaced it by:", name + LostAndFoundSuffix + '/' + incl.attributes.file_name);
+                    name += LostAndFoundSuffix;
+                }
+
                 addToDownloads(downloadPrefix + name + "/" + incl.attributes.file_name, incl.attributes.download_url);
             }
 
@@ -245,8 +255,7 @@ async function addToDownloads(filename, url) {
     count.onsuccess = () => {
         if (count.result == 0) { // if not already in db
             
-            if (debug)
-                console.info("adding to db: " + filename + ",", url);
+            if (debug) console.info("adding to db: " + filename + ",", url);
 
             let op = db.transaction("downloads", "readwrite").objectStore("downloads").add({
                 filename: filename,
@@ -255,7 +264,7 @@ async function addToDownloads(filename, url) {
             });
 
             op.onerror = () => {
-                console.warn("error adding entry to database", op);
+                console.warn("error adding entry to database", filename);
             };
         }
     };   

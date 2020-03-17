@@ -35,6 +35,9 @@
 		<h1>Patreon Helper</h1>
 		<h2>News</h2>
 		<p>
+			<strong>03/2020</strong>: Patreon stopped delivering filenames to some attachments; a new setting below lets you download affected files anyway.
+		</p>
+		<p>
 			<strong>03/2020</strong>: Your settings below would be forgotten after a short while; that's fixed now!
 		<p>
 			<strong>02/2020</strong>: Thank you for trying Patreon Helper. I hope you'll find this tool helpful in saving you a bit of manual work.<br />
@@ -48,7 +51,13 @@
 		<article>
 			<label>
 				<input type="checkbox" id="downloadAttachments" name="downloadAttachments" />
-				<span><strong>Download Attachments</strong>: Some attachments can only be downloaded in a quirky way that will bother you with a "Save As" dialog for each single file. Enable this option if you don't mind confirming each of those dialogs and want to get those additional attachments, too. Otherwise Patreon Helper will ignore them.</span>
+				<span><strong>Download Attachments</strong>: Some attachments can only be downloaded in a quirky way that will bother you with a "Save As" dialog for each single file and also download them multiple times to a LostAndFound directory. Enable this option if you don't mind confirming this inconvenience and want to get those additional attachments, too. Otherwise Patreon Helper will ignore them.</span>
+			</label>
+		</article>
+		<article>
+			<label>
+				<input type="checkbox" id="useLostAndFound" name="useLostAndFound" />
+				<span><strong>Use Lost&Found Directory</strong>: Patreon Helper sometimes cannot identify a file name and whether this file has already been downloaded. In such cases, and if this option is enabled, those uncertain files will be downloaded to <code>{ArtistName}_LostAndFound</code> every time you surf Patreon.</span>
 			</label>
 		</article>
 	</main>

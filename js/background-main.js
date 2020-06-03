@@ -35,11 +35,19 @@ function updateSettingsStorage() {
 		debug: debug
 	}
 
+	ExportLog.enabled = settings.debug;
+
+	ExportLog.info('user settings changed:', settings);
+
 	browser.storage.local.set({settings})
 		.then(
 			() => {if (debug) console.info('wrote settings to local storage:', settings)}, 
 			(error) => {console.error('failed to write settings to local storage, details:', error)}
 		);
+}
+
+function getExportLog() {
+	return ExportLog.content;
 }
 
  /* download */
@@ -56,5 +64,4 @@ var mediaExtensions = [
 var unknownCreator = "_unknown";
 var LostAndFoundSuffix = "_LostAndFound"
 
-
-console.info("patreon helper 1.7 loaded");
+console.info("patreon helper 1.8 loaded");

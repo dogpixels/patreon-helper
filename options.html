@@ -4,18 +4,31 @@
   <head>
 	<meta charset="utf-8">
 	<style>
-		main, label, .error {
+		main, label, .error, .fill-inline {
 			display: block;
 			padding: 8px 8px 16px;
 		}
-		label:hover {
+		article > label:hover {
 			background-color: rgba(232, 91, 70, 0.1);
 			cursor: pointer;
 		}
 		article {
+			position: relative;
 			border: 1px solid rgb(232, 91, 70);
 			border-radius: 4px;
 			margin: 10px 0;
+			overflow: hidden;
+		}
+		button {
+			background-color: rgb(232, 91, 70);
+			border: none;
+			border-radius: 4px;
+			text-align: center;
+			color: #fff;
+		}
+		button:hover {
+			text-decoration: underline;
+			cursor: pointer;
 		}
 		.error {
 			background-color:rgb(232, 91, 70);
@@ -27,6 +40,53 @@
 		#backgroundContextLoadFailedError {
 			display: none;
 		}
+		article > *:nth-child(2) {
+			display: block;
+			color: #000;
+			text-decoration: none;
+			padding: 8px 8px 16px;
+		}
+		#logCache {
+			display: block;
+			position: relative;
+			z-index: 1;
+			width: 100%;
+			height: 0;
+			margin: 0;
+			padding: 0;
+			transition: height 0.3s, padding 0.3s;
+			overflow-y: scroll;
+			font-family: "Courier New", monospace;
+			font-size: 10pt;
+			border: none;
+			border-top: 1px solid transparent;
+			background-color: transparent;
+			color: #000;
+			white-space: pre;
+		}
+		#logCache.open {
+			height: 320px;
+			padding: 8px 8px 16px;
+			border-top: 1px solid rgb(232, 91, 70);
+		}
+		#logCache:before {
+			content: "LOG WINDOW";
+			color: rgba(0, 0, 0, 0.05);
+			font-size: 32pt;
+			font-weight: bold;
+			letter-spacing: 0.2em;
+			position: absolute;
+			top: 10px;
+			left: 10px;
+		}
+		#logCopy {
+			position: absolute;
+			z-index: 2;
+			top: calc(4em + 39px);
+			width: 120px;
+			height: 32px;
+			border-top-left-radius: 0;
+		}
 	</style>
   </head>
 
@@ -35,7 +95,10 @@
 		<h1>Patreon Helper</h1>
 		<h2>News</h2>
 		<p>
-			<strong>03/2020</strong>: Patreon stopped delivering filenames to some attachments; a new setting below lets you download affected files anyway.
+			<strong>06/2020</strong>: "Enable Logging" has been added. This feature enables issue reporters to collect detailed information on their case.
+		</p>
+		<p>
+			<strong>03/2020</strong>: Patreon stopped delivering filenames to some attachments; a new setting below ('Use Lost&Found Directory') lets you download affected files anyway.
 		</p>
 		<p>
 			<strong>03/2020</strong>: Your settings below would be forgotten after a short while; that's fixed now!
@@ -59,6 +122,14 @@
 				<input type="checkbox" id="useLostAndFound" name="useLostAndFound" />
 				<span><strong>Use Lost&Found Directory</strong>: Patreon Helper sometimes cannot identify a file name and whether this file has already been downloaded. In such cases, and if this option is enabled, those uncertain files will be downloaded to <code>{ArtistName}_LostAndFound</code> every time you surf Patreon.</span>
 			</label>
+		</article>
+		<article>
+			<label>
+				<input type="checkbox" id="debug" name="debug" />
+				<span><strong>Enable Logging</strong>: Tell Patreon Helper to record all its' actions; this is helpful for developers to track down issues they cannot re-enact themselves.<br />Before uploading this log anywhere online, consider that it may contain hints to what you're looking at while browsing Patreon. You can review the log content after activating this option.</span>
+			</label>
+			<button type="button" id="logCopy">copy to clipboard</button>
+			<textarea id="logCache" disabled></textarea>
 		</article>
 	</main>
     <script src="js/options.js"></script>

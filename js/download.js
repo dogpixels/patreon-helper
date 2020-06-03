@@ -36,6 +36,7 @@ setInterval(() => {
         let url = cursor.value.url;
 
         if (debug) console.log("downloading '" +  filename + "', url:", url);
+        ExportLog.info(`[download worker] downloading; filename: '${filename}', url: '${url}'`)
 
         // served from patreonusercontent.com - download directly
         if (url.includes('patreonusercontent.com')) {
@@ -50,6 +51,7 @@ setInterval(() => {
                 },
                 () => { // onerror
                     console.warn("download failed", dl);
+                    ExportLog.error(`[download worker] download failed; filename: '${filename}', url: '${url}'; browser.downloads.download() returned:`, dl)
                 }
             );
 
@@ -70,6 +72,7 @@ setInterval(() => {
                     },
                     () => {
                         console.warn("failed to open tab for extended download");
+                        ExportLog.error(`[download worker] failed to open tab for extended download; filename: '${filename}', url: '${url}'`)
                     }
                 )
                 downloaded = true;
@@ -78,6 +81,7 @@ setInterval(() => {
         
         if (downloaded) {
             // todo: [2-2]
+            ExportLog.info(`[download worker] marking as successfully downloaded; filename: '${filename}', url: '${url}'`)
             cursor.value.state = 1;
             cursor.update(cursor.value);
         }

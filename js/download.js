@@ -60,22 +60,30 @@ setInterval(() => {
         // something else (e.g. http-302) - open in tab // todo: [3]
         else {
             if (downloadAttachments) {
+                if (debug) console.info("Downloading attachment", {filename: filename, url: url});
+                ExportLog.info("Downloading attachment", {filename: filename, url: url});
                 browser.tabs.create({
                     active: false,
                     url: url
-                }).then(
-                    (tab) => {
-                        setTimeout(() => {
-                            try {browser.tabs.remove(tab.id);} // try closing the tab
-                            catch {} // closing the tab was a service to the user anyway
-                        }, 3000); // wait a bit for the download to begin
-                    },
-                    () => {
-                        console.warn("failed to open tab for extended download");
-                        ExportLog.error(`[download worker] failed to open tab for extended download; filename: '${filename}', url: '${url}'`)
-                    }
-                )
+                })
+                /* Note: the following lines are obsolete, since the document after the 302-redirect replies with content-disposition: attachment */
+                // .then(
+                //     (tab) => {
+                //         setTimeout(() => {
+                //             try {browser.tabs.remove(tab.id);} // try closing the tab
+                //             catch {} // closing the tab was a service to the user anyway
+                //         }, 3000); // wait a bit for the download to begin
+                //     },
+                //     () => {
+                //         console.warn("failed to open tab for extended download");
+                //         ExportLog.error(`[download worker] failed to open tab for extended download; filename: '${filename}', url: '${url}'`)
+                //     }
+                // )
                 downloaded = true;
+            }
+            else {
+                if (debug) console.info("Attachment download skipped due to user settings (downloadAttachments: false)", {filename: filename, url: url});
+                ExportLog.info(`Attachment download skipped due to user settings (downloadAttachments: false)`, {filename: filename, url: url});
             }
         }
         

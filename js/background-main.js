@@ -6,19 +6,14 @@
  /* global */
 var debug = false;
 var dbVersion = 1;
+var foregroundTabId = -1;
 
 /* options */
-var downloadAttachments = true; // attachments currently only download with a "Save As" dialog; If false, these files will be ignored.
 var useLostAndFound = true; // attachments with file_name = null will be downloaded with a random generated file name to {ArtistName}_{LostAndFoundSuffix}
 
 browser.storage.local.get('settings').then((result) => {
-	if (result.hasOwnProperty('settings') && result.hasOwnProperty('downloadAttachments'))
-		downloadAttachments = result.downloadAttachments;
-	else 
-		updateSettingsStorage();
-
 	if (result.hasOwnProperty('settings') && result.hasOwnProperty('useLostAndFound'))
-		useLostAndFound = result.useLostAndFoundM
+		useLostAndFound = result.useLostAndFound;
 	else
 		updateSettingsStorage();
 
@@ -30,7 +25,6 @@ browser.storage.local.get('settings').then((result) => {
 
 function updateSettingsStorage() {
 	let settings = {
-		downloadAttachments: downloadAttachments,
 		useLostAndFound: useLostAndFound,
 		debug: debug
 	}

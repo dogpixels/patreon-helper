@@ -11,8 +11,15 @@
 		"128": "img/pax128.png",
 		"192": "img/pax192.png"
 	},
+	"content_scripts": [
+		{
+			"matches": ["*://*.patreon.com/*"],
+			"js": ["js/content.js"],
+			"css": ["css/content.css"]
+		}
+	],
 	"background": {
-		"scripts": ["js/exportlog.js", "js/background-main.js", "js/intercept.js", "js/download.js"]
+		"scripts": ["js/background-main.js", "js/intercept.js", "js/download.js", "js/exportlog.js"]
 	},
 	"options_ui": {
 		"page": "options.html"
@@ -25,6 +32,7 @@
 		"downloads",
 		"webRequest",
 		"webRequestBlocking",
-		"clipboardWrite"
+		"clipboardWrite",
+		"tabs"
 	]
 }

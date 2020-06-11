@@ -1,0 +1,16 @@
+.ph-link {
+	display: block;
+	width: 1px;
+	height: 1px;
+	position: fixed;
+	top: -9999px;
+	left: -9999px;
+	opacity: 0;
+
+	opacity: 1;
+	top: 100px;
+	left: 100px;
+	background: red;
+	height: 100px;
+	width: 100px;
+}

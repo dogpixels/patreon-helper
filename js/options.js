@@ -3,21 +3,14 @@
  * 	draconigen@gmail.com
  */
 
-var downloadAttachmentsCheckbox = document.getElementById("downloadAttachments");
 var useLostAndFoundCheckbox = document.getElementById("useLostAndFound");
 var debugCheckbox = document.getElementById("debug");
 var logCache = document.getElementById("logCache");
 var logCopyButton = document.getElementById("logCopy");
 
 browser.runtime.getBackgroundPage().then((backgroundContext) => {
-	downloadAttachmentsCheckbox.checked = backgroundContext.downloadAttachments;
 	useLostAndFoundCheckbox.checked = backgroundContext.useLostAndFound;
 	debugCheckbox.checked = backgroundContext.debug;
-
-	downloadAttachmentsCheckbox.addEventListener('change', (event) => {
-		backgroundContext.downloadAttachments = event.target.checked;
-		backgroundContext.updateSettingsStorage();
-	});
 
 	useLostAndFoundCheckbox.addEventListener('change', (event) => {
 		backgroundContext.useLostAndFound = event.target.checked;

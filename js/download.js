@@ -11,7 +11,8 @@ dbOpen.onupgradeneeded = () => {
     if (debug) console.info("initializing downloads structure");
 
     let store = dbOpen.result.createObjectStore("downloads", {keyPath: "id", autoIncrement: true});
-    store.createIndex("filename", "filename", {unique: true}); // note [1]
+    store.createIndex("identifier", "identifier", {unique: true});
+    store.createIndex("filename", "filename", {unique: false});
     store.createIndex("url", "url", {unique: false});
     store.createIndex("state", "state", {unique: false});
 }
@@ -66,19 +67,6 @@ setInterval(() => {
                     active: false,
                     url: url
                 })
-                /* Note: the following lines are obsolete, since the document after the 302-redirect replies with content-disposition: attachment */
-                // .then(
-                //     (tab) => {
-                //         setTimeout(() => {
-                //             try {browser.tabs.remove(tab.id);} // try closing the tab
-                //             catch {} // closing the tab was a service to the user anyway
-                //         }, 3000); // wait a bit for the download to begin
-                //     },
-                //     () => {
-                //         console.warn("failed to open tab for extended download");
-                //         ExportLog.error(`[download worker] failed to open tab for extended download; filename: '${filename}', url: '${url}'`)
-                //     }
-                // )
                 downloaded = true;
             }
             else {
@@ -99,10 +87,6 @@ setInterval(() => {
 }, 3000); // 3 sec
 
 /*
- *  [1] : potential issue: when the same artist uploads an image with the
- *  same filename, the second post will be ignored because the unique filename was
- *  already present in database.
- *
  *  [2] : potential issue: a download will be signaled to have been downloaded (state = 1), 
  *  even though it is not confirmed that the download has successfully started (see [2-1], 
  *  which is in download().onsuccess method).

@@ -8,6 +8,7 @@ var streamUrls = [
     '*://*.patreon.com/api/posts*'
 ];
 var postsNameRegex = /\/join\/(\w+)\/checkout*/;
+var identifierRegex = /\/post\/\d*\/(\w*)\/|file\?(h\=\d*\&i\=\w*)/;
 
 var db;
 var names = {};
@@ -222,7 +223,7 @@ function extractDownloadInfo(response) {
                 // workaround for when patreon started to null attributes.file_name somewhen in 03/2020
                 if (incl.attributes.file_name == null) {
                     if (!useLostAndFound) {
-                        ExportLog.warn(`[intercept:225] /{file_name} was null, but user setting useListAndFound is disabled; operation skipped`)
+                        ExportLog.warn(`[intercept:225] /{file_name} was null, but user setting useLostAndFound is disabled; operation skipped`)
                         return;
                     }
 
@@ -288,7 +289,14 @@ function findMediaUrls(text) {
 }
 
 async function addToDownloads(filename, url) {
-    ExportLog.info(`[addToDownloads()] called with filename: '${filename}' and url: '${url}'`)
+    if (debug) console.info(`[addToDownloads()] called with filename: '${filename}' and url: '${url}'`);
+    ExportLog.info(`[addToDownloads()] called with filename: '${filename}' and url: '${url}'`);
+
+    let identifier = determineFileIdentifier(filename, url);
+
+    if (debug) console.info(`[addToDownload()] identifier: '${identifier}'`);
+    ExportLog.info(`[addToDownload()] identifier: '${identifier}'`);
+
     if (typeof db === 'undefined') {
         let dbOpen = window.indexedDB.open("patreonex", dbVersion);
 
@@ -305,27 +313,58 @@ async function addToDownloads(filename, url) {
     }
 
     // check if filename already in database, add otherwise
-    let count = await db.transaction("downloads").objectStore("downloads").index("filename").count(IDBKeyRange.only(filename));
+    let count = await db.transaction("downloads").objectStore("downloads").index("identifier").count(IDBKeyRange.only(identifier));
 
     count.onsuccess = () => {
         if (count.result == 0) { // if not already in db
-            if (debug) console.info("adding to db: " + filename + ",", url);
-            ExportLog.info(`[addToDownloads()] adding to database; filename: '${filename}', url: '${url}'`)
+            if (debug) console.info("adding to db: " + identifier + ", " + filename + ",", url);
+            ExportLog.info(`[addToDownloads()] adding to database; identifier: '${identifier}', filename: '${filename}', url: '${url}'`)
 
             let op = db.transaction("downloads", "readwrite").objectStore("downloads").add({
+                identifier: identifier,
                 filename: filename,
                 url: url,
                 state: 0
             });
 
             op.onerror = () => {
-                console.warn("error adding entry to database", filename);
-                ExportLog.error(`[addToDownloads()] error adding to database; filelename: '${filename}', url: '${url}'`)
+                console.warn("error adding entry to database", identifier);
+                ExportLog.error(`[addToDownloads()] error adding to database; identifier: '${identifier}', filelename: '${filename}', url: '${url}'`)
             };
         } else {
-            ExportLog.warn(`[addToDownloads()] skipped adding to database due to count.result > 0; filename '${filename}', url: '${url}'`)
+            ExportLog.warn(`[addToDownloads()] skipped adding to database due to count.result > 0; identifier: '${identifier}', filename '${filename}', url: '${url}'`)
         }
     };   
+}
+
+function determineFileIdentifier(filename, url) {
+    let matches = identifierRegex.exec(url);
+
+    // case 1: probably an external url - use url to identify
+    if (matches === null) {
+        if (debug) console.warn("identifier search: probably external url; whole url will be used as identifier:", url);
+        ExportLog.warn(`identifier search: probably external url; whole url will be used as identifier: ${url}`);
+        return url;
+    }
+
+    // case 2: file hosted on patreonusercontent.com
+    if (typeof matches[1] !== 'undefined') {
+        if (debug) console.info("identifier search: determined '" + matches[1] + "' (case patreonusercontent.com) for url", url);
+        ExportLog.info(`identifier search: determined '${matches[1]}' (case patreonusercontent.com) for url: ${url}`);
+        return matches[1];
+    }
+
+    // case 3: file hosted on patreon.com
+    if (typeof matches[2] !== 'undefined') {
+        if (debug) console.info("identifier search: determined '" + matches[2] + "' (case patreon.com) for url", url);
+        ExportLog.info(`identifier search: determined '${matches[1]}' (case patreon.com) for url: ${url}`);
+        return matches[2];
+    }
+
+    // that should not occur
+    if (debug) console.error("identifier search: unhandled matches", matches);
+    ExportLog.error(`identifier search: unhandled matches`, matches);
+    return filename;
 }
 
 browser.webRequest.onBeforeRequest.addListener(

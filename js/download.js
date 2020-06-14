@@ -8,7 +8,11 @@ var db;
 var dbOpen = indexedDB.open("patreonex", dbVersion);
 
 dbOpen.onupgradeneeded = () => {
-    if (debug) console.info("initializing downloads structure");
+    console.info("initializing downloads structure, version:", dbVersion);
+
+    // version 3 - added new index (identifier), hence the old object store must be dropped
+    try {dbOpen.result.deleteObjectStore("downloads")}
+    catch {console.warn("could not delete downloads object store - probably none present")}
 
     let store = dbOpen.result.createObjectStore("downloads", {keyPath: "id", autoIncrement: true});
     store.createIndex("identifier", "identifier", {unique: true});

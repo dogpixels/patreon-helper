@@ -5,7 +5,7 @@
 
  /* global */
 var debug = false;
-var dbVersion = 2;
+var dbVersion = 3;
 
 /* options */
 var downloadAttachments = true; // attachments currently only download with a "Save As" dialog; If false, these files will be ignored.
@@ -64,4 +64,4 @@ var mediaExtensions = [
 var unknownCreator = "_unknown";
 var LostAndFoundSuffix = "_LostAndFound"
 
-console.info("patreon helper 1.9 loaded");
+console.info("patreon helper 1.10 loaded");

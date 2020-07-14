@@ -357,7 +357,7 @@ function determineFileIdentifier(filename, url) {
     // case 3: file hosted on patreon.com
     if (typeof matches[2] !== 'undefined') {
         if (debug) console.info("identifier search: determined '" + matches[2] + "' (case patreon.com) for url", url);
-        ExportLog.info(`identifier search: determined '${matches[1]}' (case patreon.com) for url: ${url}`);
+        ExportLog.info(`identifier search: determined '${matches[2]}' (case patreon.com) for url: ${url}`);
         return matches[2];
     }
 

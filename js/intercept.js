@@ -359,8 +359,8 @@ function determineFileIdentifier(filename, url) {
     }
 
     // that should not occur
-    if (debug) console.error("identifier search: unhandled matches", matches);
-    ExportLog.error(`identifier search: unhandled matches`, matches);
+    if (debug) console.error("identifier search: unhandled matches, filename will be used; matches:", matches);
+    ExportLog.error(`identifier search: unhandled matches, filename will be used; matches:`, matches);
     return filename;
 }
 

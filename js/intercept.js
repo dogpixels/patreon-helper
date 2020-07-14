@@ -294,9 +294,6 @@ async function addToDownloads(filename, url) {
 
     let identifier = determineFileIdentifier(filename, url);
 
-    if (debug) console.info(`[addToDownload()] identifier: '${identifier}'`);
-    ExportLog.info(`[addToDownload()] identifier: '${identifier}'`);
-
     if (typeof db === 'undefined') {
         let dbOpen = window.indexedDB.open("patreonex", dbVersion);
 

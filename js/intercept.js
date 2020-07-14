@@ -97,7 +97,18 @@ function extractDownloadInfo(response) {
                     url: data.attributes.post_file.url
                 });
 
+                // 07/2020 "Nikofix" for Patreon's odd fetish to slap some wrong file name onto the first url on a post with multiple images
+                if (
+                    data.attributes.hasOwnProperty('post_metadata') &&
+                    data.attributes.post_metadata.hasOwnProperty('image_order') &&
+                    data.attributes.post_metadata.image_order.length > 1
+                ) {
+                    if (debug) console.warn(`the aforementioned media on post has been identified affected by 07/2020 Nikofix and has been skipped`);
+                    ExportLog.warn(`[intercept:107] the aforementioned media on post has been identified affected by 07/2020 Nikofix and has been skipped`);
+                }
+                else {
                 addToDownloads(downloadPrefix + name + "/" + data.attributes.post_file.name, data.attributes.post_file.url);
+                }
 
                 /* search post text for media links */
                 if (data.attributes.hasOwnProperty('content') && data.attributes.content != null) {

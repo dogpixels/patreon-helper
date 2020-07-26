@@ -100,6 +100,7 @@ function extractDownloadInfo(response) {
                 // 07/2020 "Nikofix" for Patreon's odd fetish to slap some wrong file name onto the first url on a post with multiple images
                 if (
                     data.attributes.hasOwnProperty('post_metadata') &&
+                    data.attributes.post_metadata && // might be null
                     data.attributes.post_metadata.hasOwnProperty('image_order') &&
                     data.attributes.post_metadata.image_order.length > 1
                 ) {

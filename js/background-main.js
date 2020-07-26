@@ -64,4 +64,4 @@ var mediaExtensions = [
 var unknownCreator = "_unknown";
 var LostAndFoundSuffix = "_LostAndFound"
 
-console.info("patreon helper 1.11 loaded");
+console.info("patreon helper 1.12 loaded");

@@ -10,29 +10,38 @@ var dbVersion = 3;
 /* options */
 var downloadAttachments = true; // attachments currently only download with a "Save As" dialog; If false, these files will be ignored.
 var useLostAndFound = true; // attachments with file_name = null will be downloaded with a random generated file name to {ArtistName}_{LostAndFoundSuffix}
+var downloadInterval = 3000; // ms
+var downloadIntervalId = 0;
 
 browser.storage.local.get('settings').then((result) => {
-	if (result.hasOwnProperty('settings') && result.hasOwnProperty('downloadAttachments'))
-		downloadAttachments = result.downloadAttachments;
-	else 
-		updateSettingsStorage();
+	if (result.hasOwnProperty('settings')) {
+		if (result.settings.hasOwnProperty('downloadAttachments'))
+			downloadAttachments = result.settings.downloadAttachments;
+		
+		if (result.settings.hasOwnProperty('useLostAndFound'))
+			useLostAndFound = result.settings.useLostAndFound;
+	
+		if (result.settings.hasOwnProperty('debug'))
+			debug = result.settings.debug;
+	
+		if (result.settings.hasOwnProperty('downloadInterval'))
+			downloadInterval = result.settings.downloadInterval;
+	}
 
-	if (result.hasOwnProperty('settings') && result.hasOwnProperty('useLostAndFound'))
-		useLostAndFound = result.useLostAndFoundM
-	else
-		updateSettingsStorage();
+	if (debug) console.info("loaded user settings from localStorage:", result);
+	ExportLog.info("loaded user settings from localStorage:", result);
 
-	if (result.hasOwnProperty('settings') && result.hasOwnProperty('debug'))
-		debug = result.debug;
-	else
-		updateSettingsStorage();
+	updateSettingsStorage();
+
+	initializeDownloadInterval();
 });
 
 function updateSettingsStorage() {
 	let settings = {
 		downloadAttachments: downloadAttachments,
 		useLostAndFound: useLostAndFound,
-		debug: debug
+		debug: debug,
+		downloadInterval: downloadInterval
 	}
 
 	ExportLog.enabled = settings.debug;
@@ -41,8 +50,14 @@ function updateSettingsStorage() {
 
 	browser.storage.local.set({settings})
 		.then(
-			() => {if (debug) console.info('wrote settings to local storage:', settings)}, 
-			(error) => {console.error('failed to write settings to local storage, details:', error)}
+			() => {
+				if (debug) console.info('wrote settings to localStorage:', settings);
+				ExportLog.info('wrote user settings to localStorage:', settings);
+			}, 
+			(error) => {
+				console.error('failed to write settings to localStorage, details:', error);
+				ExportLog.error('failed to write settings to localStorage, details:', error);
+			}
 		);
 }
 
@@ -52,7 +67,6 @@ function getExportLog() {
 
  /* download */
 var concurrentDownloads = 1;
-var downloadInterval = 6000; // ms
 var downloadPrefix = 'patreon/';
 var mediaExtensions = [
 	'png', 'gif', 'jpg', 'jpeg', 'bmp', 'ai', 'ps', 'svg', 'tif', 'tiff', 'ico', 							// image
@@ -64,4 +78,4 @@ var mediaExtensions = [
 var unknownCreator = "_unknown";
 var LostAndFoundSuffix = "_LostAndFound"
 
-console.info("patreon helper 1.12 loaded");
+console.info("patreon helper 1.13 loaded");

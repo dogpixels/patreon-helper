@@ -95,6 +95,9 @@
 		<h1>Patreon Helper</h1>
 		<h2>News</h2>
 		<p>
+			<strong>01/2021 (1.13)</strong>: The new setting "Download Interval" now lets you control how often Patreon Helper will attempt to download files off its queue. If your downloads take longer than the default three second interval, raising this value will help you smoothen the process and prevent erroneous behavior.
+		</p>
+		<p>
 			<strong>07/2020 (1.12)</strong>: Fixed a bug in the aforementioned bugfix that caused some simple posts to be falsely excluded from being downloaded. Sorry! 
 		</p>
 		<p>
@@ -130,6 +133,13 @@
 			<label>
 				<input type="checkbox" id="useLostAndFound" name="useLostAndFound" />
 				<span><strong>Use Lost&Found Directory</strong>: Patreon Helper sometimes cannot identify a file name and whether this file has already been downloaded. In such cases, and if this option is enabled, those uncertain files will be downloaded to <code>{ArtistName}_LostAndFound</code> every time you surf Patreon.</span>
+			</label>
+		</article>
+		<article>
+			<label>
+				<span><strong>Download Interval</strong>: Interval (in milliseconds), in which to download queued media from Patreon. This interval should be higher than how long your media downloads usually take; e.g., if you regularly download large files and the download takes up to 5 seconds, an interval of at least 6000 milliseconds is recommended. Generally speaking: the higher, the safer.</span>
+				<p></p>
+				<input type="number" id="downloadInterval" name="downloadInterval" min="3000" max="2147483647" /> ms
 			</label>
 		</article>
 		<article>

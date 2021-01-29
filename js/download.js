@@ -25,71 +25,81 @@ dbOpen.onsuccess = () => {
     db = dbOpen.result;
 }
 
-// background download worker
-setInterval(() => {
-    let request = db.transaction("downloads", "readwrite").objectStore("downloads").index("state").openCursor(IDBKeyRange.upperBound(0)); // get all with state <= 0
+// background download worker, started after user settings have been loaded in background-main.js or changed in options.js
+function initializeDownloadInterval() {
+    if (downloadIntervalId !== 0) {
+        if (debug) console.info(`Attempting to cancel downloadInterval with intervalID "${downloadIntervalId}".`);
+        ExportLog.info(`[download worker] attempting to cancel downloadInterval with intervalID "${downloadIntervalId}"`);
+        clearInterval(downloadIntervalId);
+    }
 
-    let i = 0;
-    request.onsuccess = (event) => {
-        let downloaded = false;
+    downloadIntervalId = setInterval(() => {
+        let request = db.transaction("downloads", "readwrite").objectStore("downloads").index("state").openCursor(IDBKeyRange.upperBound(0)); // get all with state <= 0
 
-        if (i++ >= concurrentDownloads || !event.target.result)
-            return;
+        let i = 0;
+        request.onsuccess = (event) => {
+            let downloaded = false;
 
-        let cursor = event.target.result;
-        let filename = cursor.value.filename;
-        let url = cursor.value.url;
+            if (i++ >= concurrentDownloads || !event.target.result)
+                return;
 
-        if (debug) console.log("downloading '" +  filename + "', url:", url);
-        ExportLog.info(`[download worker] downloading; filename: '${filename}', url: '${url}'`)
+            let cursor = event.target.result;
+            let filename = cursor.value.filename;
+            let url = cursor.value.url;
 
-        // served from patreonusercontent.com - download directly
-        if (url.includes('patreonusercontent.com')) {
-            let dl = browser.downloads.download({
-                filename: filename,
-                url: url,
-                saveAs: false
-            })
-            .then(
-                () => { // onsuccess
-                    // todo: [2-1]
-                },
-                () => { // onerror
-                    console.warn("download failed", dl);
-                    ExportLog.error(`[download worker] download failed; filename: '${filename}', url: '${url}'; browser.downloads.download() returned:`, dl)
-                }
-            );
+            if (debug) console.log("downloading '" +  filename + "', url:", url);
+            ExportLog.info(`[download worker] downloading; filename: '${filename}', url: '${url}'`)
 
-            downloaded = true;
-        }
-        // something else (e.g. http-302) - open in tab // todo: [3]
-        else {
-            if (downloadAttachments) {
-                if (debug) console.info("Downloading attachment", {filename: filename, url: url});
-                ExportLog.info("Downloading attachment", {filename: filename, url: url});
-                browser.tabs.create({
-                    active: false,
-                    url: url
+            // served from patreonusercontent.com - download directly
+            if (url.includes('patreonusercontent.com')) {
+                let dl = browser.downloads.download({
+                    filename: filename,
+                    url: url,
+                    saveAs: false
                 })
+                .then(
+                    () => { // onsuccess
+                        // todo: [2-1]
+                    },
+                    () => { // onerror
+                        console.warn("download failed", dl);
+                        ExportLog.error(`[download worker] download failed; filename: '${filename}', url: '${url}'; browser.downloads.download() returned:`, dl)
+                    }
+                );
+
                 downloaded = true;
             }
+            // something else (e.g. http-302) - open in tab // todo: [3]
             else {
-                if (debug) console.info("Attachment download skipped due to user settings (downloadAttachments: false)", {filename: filename, url: url});
-                ExportLog.info(`Attachment download skipped due to user settings (downloadAttachments: false)`, {filename: filename, url: url});
+                if (downloadAttachments) {
+                    if (debug) console.info("Downloading attachment", {filename: filename, url: url});
+                    ExportLog.info("Downloading attachment", {filename: filename, url: url});
+                    browser.tabs.create({
+                        active: false,
+                        url: url
+                    })
+                    downloaded = true;
+                }
+                else {
+                    if (debug) console.info("Attachment download skipped due to user settings (downloadAttachments: false)", {filename: filename, url: url});
+                    ExportLog.info(`Attachment download skipped due to user settings (downloadAttachments: false)`, {filename: filename, url: url});
+                }
             }
-        }
-        
-        if (downloaded) {
-            // todo: [2-2]
-            ExportLog.info(`[download worker] marking as successfully downloaded; filename: '${filename}', url: '${url}'`)
-            cursor.value.state = 1;
-            cursor.update(cursor.value);
-        }
+            
+            if (downloaded) {
+                // todo: [2-2]
+                ExportLog.info(`[download worker] marking as successfully downloaded; filename: '${filename}', url: '${url}'`)
+                cursor.value.state = 1;
+                cursor.update(cursor.value);
+            }
 
-        cursor.continue();
-    }
-}, 3000); // 3 sec
+            cursor.continue();
+        }
+    }, downloadInterval);
 
+    if (debug) console.info(`Started download interval (intervalID "${downloadIntervalId}") with "${downloadInterval}" ms interval.`);
+    ExportLog.info(`[download worker] started download interval (intervalID "${downloadIntervalId}") with "${downloadInterval}" ms interval`);
+}
 /*
  *  [2] : potential issue: a download will be signaled to have been downloaded (state = 1), 
  *  even though it is not confirmed that the download has successfully started (see [2-1], 

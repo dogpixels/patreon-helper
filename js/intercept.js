@@ -14,8 +14,8 @@ var db;
 var names = {};
 
 function interceptStreamResponse(details) {
-    if (debug) console.log("intercepting api request '" + details.requestId + "'");
-    ExportLog.info(`[intercept:18] intercepting api request id '${details.requestId}'`);
+    console.log("intercepting api request '" + details.requestId + "'");
+    console.info(`intercepting api request id '${details.requestId}'`);
 
     let responseDictionary = {};
     let filter = browser.webRequest.filterResponseData(details.requestId);
@@ -28,8 +28,7 @@ function interceptStreamResponse(details) {
 
         let str = decoder.decode(event.data, {stream: true});
 
-        if (debug) console.info("writing " + str.length + " bytes to response dictionary id " + details.requestId);
-        ExportLog.info(`[intercept:32] writing '${str.length}' bytes to response dictionary id '${details.requestId}'`);
+        console.info(`writing '${str.length}' bytes to response dictionary id '${details.requestId}'`);
 
         responseDictionary[details.requestId] += str;
 
@@ -51,23 +50,21 @@ function decodeStreamResponse(responseDictionary) {
                 responseDictionary[key] = JSON.parse(responseDictionary[key]);
             } 
             catch {
-                console.error("failed to parse response requestId '" + key + "'", responseDictionary[key]);
-                ExportLog.error(`[intercept:55] failed to parse response requestId '${key}', responseDictionary[key]:`, responseDictionary[key]);
+                console.error(`failed to parse response requestId '${key}', responseDictionary[key]:`, responseDictionary[key]);
                 return;
             }
-            ExportLog.log(`[intercept:58] response '${key}' parsed successfully`);
+            console.log(`response '${key}' parsed successfully`);
             extractDownloadInfo(responseDictionary[key]);
         }
     }
 }
 
 function extractDownloadInfo(response) {
-    if (debug) console.info("scanning data", response);
-    ExportLog.info(`[intercept:66] scanning response:`, response);
+    console.info(`scanning response:`, response);
 
     /* search posts for primary media */
     if (response.hasOwnProperty('data')) { // /api/posts
-        ExportLog.log(`[intercept:70] 'data' found in response`);
+        console.log(`'data' found in response`);
         response.data.forEach(data => {
             if (
                 data.type == "post" &&
@@ -77,21 +74,16 @@ function extractDownloadInfo(response) {
                 data.attributes.post_file.hasOwnProperty('name') &&
                 data.attributes.post_file.hasOwnProperty('url')
             ) {
-                ExportLog.log(`[intercept:80] 'post_file' found in post`);
+                console.log(`'post_file' found in post`);
                 let match;
                 let name = unknownCreator;
 
                 if (data.attributes.hasOwnProperty('upgrade_url') && (match = postsNameRegex.exec(data.attributes.upgrade_url)) !== null) {
-                    ExportLog.log(`[intercept:85] trying to find creator; matching against data.attributes.upgrade_url: `, data.attributes.upgrade_url);
+                    console.log(`trying to find creator; matching against data.attributes.upgrade_url: `, data.attributes.upgrade_url);
                     name = match[1];
                 }
                 
-                if (debug) console.log("found media on post:", {
-                    name: name,
-                    file: data.attributes.post_file.name,
-                    url: data.attributes.post_file.url
-                });
-                ExportLog.log(`[intercept:94] found media on post:`, {
+                console.log("found media on post:", {
                     name: name,
                     file: data.attributes.post_file.name,
                     url: data.attributes.post_file.url
@@ -104,8 +96,7 @@ function extractDownloadInfo(response) {
                     data.attributes.post_metadata.hasOwnProperty('image_order') &&
                     data.attributes.post_metadata.image_order.length > 1
                 ) {
-                    if (debug) console.warn(`the aforementioned media on post has been identified affected by 07/2020 Nikofix and has been skipped`);
-                    ExportLog.warn(`[intercept:107] the aforementioned media on post has been identified affected by 07/2020 Nikofix and has been skipped`);
+                    console.warn(`the aforementioned media on post has been identified affected by 07/2020 Nikofix and has been skipped`);
                 }
                 else {
                     addToDownloads(downloadPrefix + name + "/" + data.attributes.post_file.name, data.attributes.post_file.url);
@@ -113,9 +104,9 @@ function extractDownloadInfo(response) {
 
                 /* search post text for media links */
                 if (data.attributes.hasOwnProperty('content') && data.attributes.content != null) {
-                    ExportLog.log(`[intercept:115] 'content' found in post response; searching for media links; data.attributes.content:`, data.attributes.content);
+                    console.log(`'content' found in post response; searching for media links; data.attributes.content:`, data.attributes.content);
                     findMediaUrls(data.attributes.content).forEach(url => {
-                        ExportLog.info(`[intercept:117] url found in post content, url:`, url);
+                        console.info(`url found in post content, url:`, url);
                         addToDownloads(downloadPrefix + name + "/" + url.split('/').pop().split('#')[0].split('?')[0], url);
                     });
                 }
@@ -127,7 +118,7 @@ function extractDownloadInfo(response) {
                     data.attributes.post_metadata.hasOwnProperty('image_order') &&
                     data.attributes.post_metadata.image_order
                 ) {
-                    ExportLog.log(`[intercept:129] 'post_metadata' found in response; image_order:`, data.attributes.post_metadata.image_order);
+                    console.log(`'post_metadata' found in response; image_order:`, data.attributes.post_metadata.image_order);
                     data.attributes.post_metadata.image_order.forEach(id => {
                         names[id] = name;
                     });
@@ -144,7 +135,7 @@ function extractDownloadInfo(response) {
                         data.relationships.images.hasOwnProperty('data') &&
                         data.relationships.images.data
                     ) {
-                        ExportLog.log(`[intercept:146] 'images' found in response post relationships; images:`, data.relationships.images.data);
+                        console.log(`'images' found in response post relationships; images:`, data.relationships.images.data);
                         if (Array.isArray(data.relationships.images.data)) {
                             data.relationships.images.data.forEach(dat => {
                                 names[dat.id] = name;
@@ -152,7 +143,7 @@ function extractDownloadInfo(response) {
                         } else if (data.relationships.images.data.hasOwnProperty('id')) {
                                 names[data.relationships.images.data.id] = name;
                         } else {
-                            exlog.error(`[intercept:154] could not handle images in resounse post relationship; images.data: `, data.relationships.images.data);
+                            console.error(`could not handle images in resounse post relationship; images.data: `, data.relationships.images.data);
                         }
                     }
                     if (
@@ -161,7 +152,7 @@ function extractDownloadInfo(response) {
                         data.relationships.audio.hasOwnProperty('data') &&
                         data.relationships.audio.data
                     ) {
-                        ExportLog.log(`[intercept:163] 'audio' found in response post relationships; audios:`, data.relationships.audio.data);
+                        console.log(`'audio' found in response post relationships; audios:`, data.relationships.audio.data);
                         if (Array.isArray(data.relationships.audio.data)) {
                             data.relationships.audio.data.forEach(dat => {
                                 names[dat.id] = name;
@@ -169,7 +160,7 @@ function extractDownloadInfo(response) {
                         } else if (data.relationships.audio.data.hasOwnProperty('id')) {
                                 names[data.relationships.audio.data.id] = name;
                         } else {
-                            exlog.error(`[intercept:171] could not handle audio in resounse post relationship; audio.data: `, data.relationships.audio.data);
+                            console.error(`could not handle audio in resounse post relationship; audio.data: `, data.relationships.audio.data);
                         }
                     }
                     if (
@@ -178,7 +169,7 @@ function extractDownloadInfo(response) {
                         data.relationships.attachments.hasOwnProperty('data') &&
                         data.relationships.attachments.data
                     ) {
-                        ExportLog.log(`[intercept:180] 'attachments' found in response post relationship: attachments:`, data.relationships.attachments.data);
+                        console.log(`attachments' found in response post relationship: attachments:`, data.relationships.attachments.data);
                         if (Array.isArray(data.relationships.attachments.data)) {
                             data.relationships.attachments.data.forEach(dat => {
                                 names[dat.id] = name;
@@ -186,7 +177,7 @@ function extractDownloadInfo(response) {
                         } else if (data.relationships.attachments.data.hasOwnProperty('id')) {
                                 names[data.relationships.attachments.data.id] = name;
                         } else {
-                            exlog.error(`[intercept:188] could not handle attachment in resounse post relationship; attachments.data: `, data.relationships.attachments.data);
+                            exlog.error(`could not handle attachment in resounse post relationship; attachments.data: `, data.relationships.attachments.data);
                         }
                     }
                 }
@@ -196,7 +187,7 @@ function extractDownloadInfo(response) {
 
     /* search stream (home feed) for media */
     if (response.hasOwnProperty('included')) {
-        ExportLog.info(`[intercept:198] 'included' found in response`);
+        console.info(`'included' found in response`);
         response.included.forEach(incl => {
             if (
                 incl.type == "user" && 
@@ -204,8 +195,7 @@ function extractDownloadInfo(response) {
                 incl.hasOwnProperty('attributes') && 
                 incl.attributes.hasOwnProperty('full_name')
             ) {
-                if (debug) console.log("found user '"+ incl.id + "'", incl.attributes.full_name);
-                ExportLog.info(`[intercept:207] found user; id: '${incl.id}', full_name: ${incl.attributes.full_name}`);
+                console.info(`found user; id: '${incl.id}', full_name: ${incl.attributes.full_name}`);
                 names[incl.id] = incl.attributes.full_name;
             }
     
@@ -221,12 +211,7 @@ function extractDownloadInfo(response) {
                 if (incl.hasOwnProperty('id') && names.hasOwnProperty(incl.id))
                     name = names[incl.id];
     
-                if (debug) console.log("found media on stream:", {
-                    name: name,
-                    file: incl.attributes.file_name,
-                    url: incl.attributes.download_url
-                });
-                ExportLog.info(`[intercept:228] found media on stream:`, {
+                console.log("found media on stream:", {
                     name: name,
                     file: incl.attributes.file_name,
                     url: incl.attributes.download_url
@@ -235,13 +220,12 @@ function extractDownloadInfo(response) {
                 // workaround for when patreon started to null attributes.file_name somewhen in 03/2020
                 if (incl.attributes.file_name == null) {
                     if (!useLostAndFound) {
-                        ExportLog.warn(`[intercept:237] /{file_name} was null, but user setting useLostAndFound is disabled; operation skipped`)
+                        console.warn(`/{file_name} was null, but user setting useLostAndFound is disabled; operation skipped`)
                         return;
                     }
 
                     incl.attributes.file_name = new Date().getTime() + '-' + Math.floor(Math.random() * 1024) + '.jpg';
-                    if (debug) console.warn(name + "/{file_name} was null, replaced it by:", name + LostAndFoundSuffix + '/' + incl.attributes.file_name);
-                    ExportLog.warn(`[intercept:243] /{file_name} was null, replanced it by '${name}${LostAndFoundSuffix}/${incl.attributes.file_name}'`);
+                    console.warn(`/{file_name} was null, replanced it by '${name}${LostAndFoundSuffix}/${incl.attributes.file_name}'`);
                     name += LostAndFoundSuffix;
                 }
 
@@ -260,12 +244,7 @@ function extractDownloadInfo(response) {
                 if (incl.hasOwnProperty('id') && names.hasOwnProperty(incl.id))
                     name = names[incl.id];
 
-                if (debug) console.log("found attachment:", {
-                    name: name,
-                    file: incl.attributes.name,
-                    url: incl.attributes.url
-                });
-                ExportLog.info(`found attachment:`, {
+                console.log("found attachment:", {
                     name: name,
                     file: incl.attributes.name,
                     url: incl.attributes.url
@@ -286,23 +265,20 @@ function findMediaUrls(text) {
     if (matches === null)
         return ret;
 
-    if (debug) console.log("found links in text:", matches);
-    ExportLog.info(`[findMediaUrls()] found links in text:`, matches);
+    console.log("found links in text:", matches);
 
     matches.forEach(url => {
         if (mediaExtensions.includes(url.match(/\.([^\s\.]+)$/i)[1]))
             ret.push(url);
     });
 
-    if (debug) console.log("extracted media links from text:", ret);
-    ExportLog.info(`[findMediaUrls()] extracted media links from text: `, ret);
+    console.log("extracted media links from text:", ret);
     
     return ret;
 }
 
 async function addToDownloads(filename, url) {
-    if (debug) console.info(`[addToDownloads()] called with filename: '${filename}' and url: '${url}'`);
-    ExportLog.info(`[addToDownloads()] called with filename: '${filename}' and url: '${url}'`);
+    console.info(`called with filename: '${filename}' and url: '${url}'`);
 
     let identifier = determineFileIdentifier(filename, url);
 
@@ -326,8 +302,7 @@ async function addToDownloads(filename, url) {
 
     count.onsuccess = () => {
         if (count.result == 0) { // if not already in db
-            if (debug) console.info("adding to db: " + identifier + ", " + filename + ",", url);
-            ExportLog.info(`[addToDownloads()] adding to database; identifier: '${identifier}', filename: '${filename}', url: '${url}'`)
+            console.info(`adding to database; identifier: '${identifier}', filename: '${filename}', url: '${url}'`)
 
             let op = db.transaction("downloads", "readwrite").objectStore("downloads").add({
                 identifier: identifier,
@@ -337,11 +312,10 @@ async function addToDownloads(filename, url) {
             });
 
             op.onerror = () => {
-                console.warn("error adding entry to database", identifier);
-                ExportLog.error(`[addToDownloads()] error adding to database; identifier: '${identifier}', filelename: '${filename}', url: '${url}'`)
+                console.error(`error adding to database; identifier: '${identifier}', filelename: '${filename}', url: '${url}'`)
             };
         } else {
-            ExportLog.warn(`[addToDownloads()] skipped adding to database due to count.result > 0; identifier: '${identifier}', filename '${filename}', url: '${url}'`)
+            console.warn(`skipped adding to database due to count.result > 0; identifier: '${identifier}', filename '${filename}', url: '${url}'`)
         }
     };   
 }
@@ -351,28 +325,24 @@ function determineFileIdentifier(filename, url) {
 
     // case 1: probably an external url - use url to identify
     if (matches === null) {
-        if (debug) console.warn("identifier search: probably external url; whole url will be used as identifier:", url);
-        ExportLog.warn(`identifier search: probably external url; whole url will be used as identifier: ${url}`);
+        console.warn("identifier search: probably external url; whole url will be used as identifier:", url);
         return url;
     }
 
     // case 2: file hosted on patreonusercontent.com
     if (typeof matches[1] !== 'undefined') {
-        if (debug) console.info("identifier search: determined '" + matches[1] + "' (case patreonusercontent.com) for url", url);
-        ExportLog.info(`identifier search: determined '${matches[1]}' (case patreonusercontent.com) for url: ${url}`);
+        console.info("identifier search: determined '" + matches[1] + "' (case patreonusercontent.com) for url", url);
         return matches[1];
     }
 
     // case 3: file hosted on patreon.com
     if (typeof matches[2] !== 'undefined') {
-        if (debug) console.info("identifier search: determined '" + matches[2] + "' (case patreon.com) for url", url);
-        ExportLog.info(`identifier search: determined '${matches[2]}' (case patreon.com) for url: ${url}`);
+        console.info("identifier search: determined '" + matches[2] + "' (case patreon.com) for url", url);
         return matches[2];
     }
 
     // that should not occur
-    if (debug) console.error("identifier search: unhandled matches, filename will be used; matches:", matches);
-    ExportLog.error(`identifier search: unhandled matches, filename will be used; matches:`, matches);
+    console.error("identifier search: unhandled matches, filename will be used; matches:", matches);
     return filename;
 }
 

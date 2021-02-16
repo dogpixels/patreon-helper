@@ -14,7 +14,6 @@ var db;
 var names = {};
 
 function interceptStreamResponse(details) {
-    console.log("intercepting api request '" + details.requestId + "'");
     console.info(`intercepting api request id '${details.requestId}'`);
 
     let responseDictionary = {};
@@ -225,8 +224,7 @@ function extractDownloadInfo(response) {
                     }
 
                     incl.attributes.file_name = new Date().getTime() + '-' + Math.floor(Math.random() * 1024) + '.jpg';
-                    console.warn(`/{file_name} was null, replanced it by '${name}${LostAndFoundSuffix}/${incl.attributes.file_name}'`);
-                    name += LostAndFoundSuffix;
+                    console.warn(`/{file_name} was null, replaced it by '${downloadPrefix}${name}${LostAndFoundSuffix}/${incl.attributes.file_name}'`);
                 }
 
                 addToDownloads(downloadPrefix + name + "/" + incl.attributes.file_name, incl.attributes.download_url);

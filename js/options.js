@@ -83,8 +83,17 @@ browser.runtime.getBackgroundPage().then((backgroundContext) => {
 			let li = document.createElement('li');
 			let label = document.createElement('label');
 			let div = document.createElement('div');
+			let input = document.createElement('input');
+			let span = document.createElement('span');
+
+			// label.innerHTML = `<input type="checkbox"${backgroundContext.knownCreators[name]? ' checked="checked"' : ''} /><span>${name}</span>`;
+			input.type = 'checkbox';
+			if (backgroundContext.knownCreators[name] === true) {
+				input.checked = true;
+			}
+
+			span.innerText = name;
 			
-			label.innerHTML = `<input type="checkbox"${backgroundContext.knownCreators[name]? ' checked="checked"' : ''} /><span>${name}</span>`;
 			label.addEventListener('change', (e) => {
 				if (backgroundContext.knownCreators.hasOwnProperty(name)) {
 					backgroundContext.knownCreators[name] = e.target.checked;
@@ -102,7 +111,9 @@ browser.runtime.getBackgroundPage().then((backgroundContext) => {
 					console.error(`User tried to delete creator "${name}", which was not part of knownCreators.`)
 				}
 			})
-	
+			
+			label.appendChild(input);
+			label.appendChild(span);
 			li.appendChild(label);
 			li.appendChild(div);
 			contentCollectionKnownCreators.appendChild(li);

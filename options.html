@@ -40,13 +40,13 @@
 		#backgroundContextLoadFailedError {
 			display: none;
 		}
-		article > *:nth-child(2) {
+		article > button {
 			display: block;
-			color: #000;
+			color: #fff;
 			text-decoration: none;
 			padding: 8px 8px 16px;
 		}
-		#logCache {
+		#logCache, #contentCollectionKnownCreators {
 			display: block;
 			position: relative;
 			z-index: 1;
@@ -63,29 +63,49 @@
 			background-color: transparent;
 			color: #000;
 			white-space: pre;
+			list-style: none;
 		}
-		#logCache.open {
+		#logCache.open, #contentCollectionKnownCreators.open {
 			height: 320px;
 			padding: 8px 8px 16px;
 			border-top: 1px solid rgb(232, 91, 70);
 		}
-		#logCache:before {
-			content: "LOG WINDOW";
-			color: rgba(0, 0, 0, 0.05);
-			font-size: 32pt;
-			font-weight: bold;
-			letter-spacing: 0.2em;
-			position: absolute;
-			top: 10px;
-			left: 10px;
+		#contentCollectionKnownCreators.open {
+			height: 160px;
+			/* padding: 36px 16px 16px; */
+			white-space: normal;
+		}
+		#contentCollectionKnownCreators > li > label {
+			display: inline;
+			padding: 0;
+		}
+		#contentCollectionKnownCreators > li > label > span {
+			position: relative;
+			top: -3px;
+		}
+		#contentCollectionKnownCreators > li > label > * {
+			pointer-events: none;
 		}
 		#logCopy {
 			position: absolute;
 			z-index: 2;
-			top: calc(4em + 39px);
+			top: calc(4em + 41px);
 			width: 120px;
 			height: 32px;
 			border-top-left-radius: 0;
+		}
+		.delete-button {
+			display: inline-block;
+			position: relative;
+			top: 1px;
+			left: 2px;
+			width: 16px;
+			height: 16px;
+			background: url('img/delete16.png');
+			opacity: .5;
+		}
+		.delete-button:hover {
+			opacity: 1;
 		}
 	</style>
   </head>
@@ -95,25 +115,11 @@
 		<h1>Patreon Helper</h1>
 		<h2>News</h2>
 		<p>
+			<strong>02/2021 (1.14)</strong>: The new setting "Enable Content Collection" controls whether Patreon Helper collects media to queue it for download while you browse Patreon. Why would you want to disable the sole purpose of this extension, you ask? Imagine you have a second computer, with Firefox Sync keeping your extensions in sync. Disabling or removing the extension altogether via Firefox' extension settings would reflect this on all your synced computers. But! Firefox sync doesn't actually sync individual extension configurations (for now), so now you can use this setting to have Patreon Helper do its work on one computer while remaining silent on the other! And while we're at it, the list below the enabled content collection lets you configure individual content creators, too.
+		</p>
+		<p>
 			<strong>01/2021 (1.13)</strong>: The new setting "Download Interval" now lets you control how often Patreon Helper will attempt to download files off its queue. If your downloads take longer than the default three second interval, raising this value will help you smoothen the process and prevent erroneous behavior.
 		</p>
-		<p>
-			<strong>07/2020 (1.12)</strong>: Fixed a bug in the aforementioned bugfix that caused some simple posts to be falsely excluded from being downloaded. Sorry! 
-		</p>
-		<p>
-			<strong>07/2020 (1.11)</strong>: A fix was introduced to help mitigate a mix-up of file names and their content for posts with multiple media. Thanks to Nikolay for his plentiful bug reporting!
-		</p>
-		<p>
-			<strong>06/2020 (1.10)</strong>: The way Patron Helper keeps track of already downloaded files has been changed greatly. This will allow different files with the same file name to be handled correctly, but it'll cause your helper to download previous files again. Sorry for the inconvenience!
-		</p>
-		<p>
-			<strong>06/2020 (1.8)</strong>: "Enable Logging" has been added. This feature enables issue reporters to collect detailed information on their case.
-		</p>
-		<p>
-			<strong>03/2020 (1.7)</strong>: Patreon stopped delivering filenames to some attachments; a new setting below ('Use Lost&Found Directory') lets you download affected files anyway.
-		</p>
-		<p>
-			<strong>03/2020 (1.6)</strong>: Your settings below would be forgotten after a short while; that's fixed now!
 		<p>
 			<strong>02/2020</strong>: Thank you for trying Patreon Helper. I hope you'll find this tool helpful in saving you a bit of manual work.<br />
 			Please note that it is really just a helper and might easily miss attachments or linked media along all the odd and countless ways Patreon constructs posts and links. Always check on your helper's success!
@@ -125,8 +131,15 @@
 		</article>
 		<article>
 			<label>
+				<input type="checkbox" id="contentCollectionEnabledCheckbox" name="contentCollectionEnabledCheckbox" />
+				<span><strong>Enable Content Collection</strong>: While checked, Patreon Helper will gather media to download as you browse Patreon. Additionally, you may uncheck individual content creators below to exclude them from content collection specifically.</span>
+			</label>
+			<ul id="contentCollectionKnownCreators"></ul>
+		</article>
+		<article>
+			<label>
 				<input type="checkbox" id="downloadAttachments" name="downloadAttachments" />
-				<span><strong>Download Attachments</strong>: Some attachments can only be downloaded in a quirky way that will bother you with a "Save As" dialog for each single file and also download them multiple times to a LostAndFound directory. Enable this option if you don't mind confirming this inconvenience and want to get those additional attachments, too. Otherwise Patreon Helper will ignore them.</span>
+				<span><strong>Download Attachments</strong>: Some attachments can only be downloaded in a quirky way that might bother you with a "Save As" dialog for each single file (depending on your Firefox settings) and also download them multiple times to a LostAndFound directory. Enable this option if you don't mind confirming this inconvenience and want to get those additional attachments, too. Otherwise Patreon Helper will ignore them.</span>
 			</label>
 		</article>
 		<article>

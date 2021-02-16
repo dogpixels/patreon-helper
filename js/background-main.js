@@ -7,11 +7,12 @@
 var dbVersion = 3;
 
 /* options */
-// debug = true;
 var downloadAttachments = true; // attachments currently only download with a "Save As" dialog; If false, these files will be ignored.
 var useLostAndFound = true; // attachments with file_name = null will be downloaded with a random generated file name to {ArtistName}_{LostAndFoundSuffix}
 var downloadInterval = 3000; // ms
 var downloadIntervalId = 0;
+var contentCollectionEnabled = true;
+var knownCreators = {};
 
 browser.storage.local.get('settings').then((result) => {
 	if (result.hasOwnProperty('settings')) {
@@ -26,6 +27,12 @@ browser.storage.local.get('settings').then((result) => {
 	
 		if (result.settings.hasOwnProperty('downloadInterval'))
 			downloadInterval = result.settings.downloadInterval;
+
+		if (result.settings.hasOwnProperty('contentCollectionEnabled'))
+			contentCollectionEnabled = result.settings.contentCollectionEnabled;
+
+		if (result.settings.hasOwnProperty('knownCreators'))
+			knownCreators = result.settings.knownCreators;
 	}
 
 	console.info("loaded user settings from localStorage:", result);
@@ -40,7 +47,9 @@ function updateSettingsStorage() {
 		downloadAttachments: downloadAttachments,
 		useLostAndFound: useLostAndFound,
 		debug: debug,
-		downloadInterval: downloadInterval
+		downloadInterval: downloadInterval,
+		contentCollectionEnabled: contentCollectionEnabled,
+		knownCreators: knownCreators
 	}
 
 	console.info('user settings changed:', settings);
@@ -48,16 +57,12 @@ function updateSettingsStorage() {
 	browser.storage.local.set({settings})
 	.then(
 		() => {
-			console.info('wrote settings to localStorage:', settings);
+			// console.info('wrote settings to localStorage:', settings);
 		}, 
 		(error) => {
 			console.error('failed to write settings to localStorage, details:', error);
 		}
 	);
-}
-
-function getExportLog() {
-	return log_content;
 }
 
  /* download */

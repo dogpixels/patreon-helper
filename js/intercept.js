@@ -98,7 +98,7 @@ function extractDownloadInfo(response) {
                     console.warn(`the aforementioned media on post has been identified affected by 07/2020 Nikofix and has been skipped`);
                 }
                 else {
-                    addToDownloads(downloadPrefix + name + "/" + data.attributes.post_file.name, data.attributes.post_file.url);
+                    addToDownloads(name, downloadPrefix + name + "/" + data.attributes.post_file.name, data.attributes.post_file.url);
                 }
 
                 /* search post text for media links */
@@ -106,7 +106,7 @@ function extractDownloadInfo(response) {
                     console.log(`'content' found in post response; searching for media links; data.attributes.content:`, data.attributes.content);
                     findMediaUrls(data.attributes.content).forEach(url => {
                         console.info(`url found in post content, url:`, url);
-                        addToDownloads(downloadPrefix + name + "/" + url.split('/').pop().split('#')[0].split('?')[0], url);
+                        addToDownloads(name, downloadPrefix + name + "/" + url.split('/').pop().split('#')[0].split('?')[0], url);
                     });
                 }
 
@@ -227,7 +227,7 @@ function extractDownloadInfo(response) {
                     console.warn(`/{file_name} was null, replaced it by '${downloadPrefix}${name}${LostAndFoundSuffix}/${incl.attributes.file_name}'`);
                 }
 
-                addToDownloads(downloadPrefix + name + "/" + incl.attributes.file_name, incl.attributes.download_url);
+                addToDownloads(name, `${downloadPrefix}${name}${LostAndFoundSuffix}/${incl.attributes.file_name}`, incl.attributes.download_url);
             }
 
             // attachments
@@ -248,7 +248,7 @@ function extractDownloadInfo(response) {
                     url: incl.attributes.url
                 });
 
-                addToDownloads(downloadPrefix + name + "/" + incl.attributes.name, incl.attributes.url);
+                addToDownloads(name, downloadPrefix + name + "/" + incl.attributes.name, incl.attributes.url);
             }
         });
     }
@@ -275,8 +275,20 @@ function findMediaUrls(text) {
     return ret;
 }
 
-async function addToDownloads(filename, url) {
-    console.info(`called with filename: '${filename}' and url: '${url}'`);
+async function addToDownloads(creator, filename, url) {
+    registerCreator(creator);
+
+    console.info(`Queueing: creator: "${creator}", filename: "${filename}", url: "${url}"`);
+
+    if (!contentCollectionEnabled) {
+        console.info(`Content collection generally disabled; queueing skipped.`);
+        return;
+    }
+
+    if (knownCreators[creator] === false) {
+        console.info(`Content collection enabled, but creator "${creator}" excluded; queueing skipped.`);
+        return;
+    }
 
     let identifier = determineFileIdentifier(filename, url);
 

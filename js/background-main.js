@@ -79,3 +79,12 @@ var unknownCreator = "_unknown";
 var LostAndFoundSuffix = "_LostAndFound"
 
 console.info("patreon helper 1.15 loaded");
+
+var pageCreator = null;
+browser.runtime.onMessage.addListener((request, sender) => {
+	console.info(`Runtime Message received. Action: "${request.action}" from ${sender.tab.active? "active ": ""}tab with url "${sender.tab.url}"`, request);
+
+	switch (request.action) {
+		case "setPageCreator": pageCreator = request.data.creator; console.info(`pageCreator set to "${pageCreator}".`); break;
+	}
+});

@@ -75,7 +75,7 @@ function extractDownloadInfo(response) {
             ) {
                 console.log(`'post_file' found in post`);
                 let match;
-                let name = unknownCreator;
+                let name = pageCreator? pageCreator : unknownCreator;
 
                 if (data.attributes.hasOwnProperty('upgrade_url') && (match = postsNameRegex.exec(data.attributes.upgrade_url)) !== null) {
                     console.log(`trying to find creator; matching against data.attributes.upgrade_url: `, data.attributes.upgrade_url);
@@ -205,7 +205,7 @@ function extractDownloadInfo(response) {
                 incl.attributes.hasOwnProperty('download_url') && 
                 incl.attributes.hasOwnProperty('file_name')
             ) {
-                let name = unknownCreator;
+                let name = pageCreator? pageCreator : unknownCreator;
 
                 if (incl.hasOwnProperty('id') && names.hasOwnProperty(incl.id))
                     name = names[incl.id];
@@ -238,7 +238,7 @@ function extractDownloadInfo(response) {
                 incl.attributes.hasOwnProperty('name') &&
                 incl.attributes.hasOwnProperty('url')
             ) {
-                let name = unknownCreator;
+                let name = pageCreator? pageCreator : unknownCreator;
 
                 if (incl.hasOwnProperty('id') && names.hasOwnProperty(incl.id))
                     name = names[incl.id];

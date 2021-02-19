@@ -224,10 +224,11 @@ function extractDownloadInfo(response) {
                     }
 
                     incl.attributes.file_name = new Date().getTime() + '-' + Math.floor(Math.random() * 1024) + '.jpg';
-                    console.warn(`/{file_name} was null, replaced it by '${downloadPrefix}${name}${LostAndFoundSuffix}/${incl.attributes.file_name}'`);
+                    name += LostAndFoundSuffix;
+                    console.warn(`/{file_name} was null, replaced it by '${incl.attributes.file_name}'`);
                 }
 
-                addToDownloads(name, `${downloadPrefix}${name}${LostAndFoundSuffix}/${incl.attributes.file_name}`, incl.attributes.download_url);
+                addToDownloads(name, `${downloadPrefix}${name}/${incl.attributes.file_name}`, incl.attributes.download_url);
             }
 
             // attachments

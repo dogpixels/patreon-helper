@@ -168,7 +168,7 @@ function extractDownloadInfo(response) {
                         data.relationships.attachments.hasOwnProperty('data') &&
                         data.relationships.attachments.data
                     ) {
-                        console.log(`attachments' found in response post relationship: attachments:`, data.relationships.attachments.data);
+                        console.log(`attachments found in response post relationship: attachments:`, data.relationships.attachments.data);
                         if (Array.isArray(data.relationships.attachments.data)) {
                             data.relationships.attachments.data.forEach(dat => {
                                 names[dat.id] = name;

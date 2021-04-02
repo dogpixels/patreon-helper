@@ -14,11 +14,11 @@
 	"content_scripts": [
 		{
 			"matches": ["*://*.patreon.com/*"],
-			"js": ["js/content/url.js"]
+			"js": ["js/content/main.js", "js/content/loadmore.js", "js/content/url.js"]
 		}
 	],
 	"background": {
-		"scripts": ["js/logging.js", "js/creators.js", "js/background-main.js", "js/intercept.js", "js/download.js"]
+		"scripts": ["js/logging.js", "js/creators.js", "js/background-main.js", "js/intercept.js", "js/download.js", "js/auto-loadmore.js"]
 	},
 	"options_ui": {
 		"page": "options.html"

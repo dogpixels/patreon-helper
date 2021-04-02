@@ -253,6 +253,8 @@ function extractDownloadInfo(response) {
             }
         });
     }
+
+    autoloadmore_process(response);
 }
 
 function findMediaUrls(text) {

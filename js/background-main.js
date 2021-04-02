@@ -5,6 +5,7 @@
 
  /* global */
 var dbVersion = 3;
+var contentScriptTabId = -1;
 
 /* options */
 var downloadAttachments = true; // attachments currently only download with a "Save As" dialog; If false, these files will be ignored.
@@ -13,6 +14,7 @@ var downloadInterval = 3000; // ms
 var downloadIntervalId = 0;
 var contentCollectionEnabled = true;
 var knownCreators = {};
+var loadMoreDelay = 12000; // ms
 
 browser.storage.local.get('settings').then((result) => {
 	if (result.hasOwnProperty('settings')) {
@@ -78,13 +80,15 @@ var mediaExtensions = [
 var unknownCreator = "_unknown";
 var LostAndFoundSuffix = "_LostAndFound"
 
-console.info("patreon helper 1.15 loaded");
+console.info("patreon helper 1.16 loaded");
 
 var pageCreator = null;
+var pageArguments = null;
 browser.runtime.onMessage.addListener((request, sender) => {
 	console.info(`Runtime Message received. Action: "${request.action}" from ${sender.tab.active? "active ": ""}tab with url "${sender.tab.url}"`, request);
 
 	switch (request.action) {
-		case "setPageCreator": pageCreator = request.data.creator; console.info(`pageCreator set to "${pageCreator}".`); break;
+		case "setPostsPageDetails": pageCreator = request.data.creator; pageArguments = request.data.arguments; console.info(`pageCreator set to "${pageCreator}", arguments: ${pageArguments}.`); break;
+		case "setContentScriptTabId": if (sender.tab.id !== contentScriptTabId) {contentScriptTabId = sender.tab.id; console.info(`Content Script TabID registered to "${contentScriptTabId}"`)}; break;
 	}
 });

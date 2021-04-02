@@ -1,10 +1,11 @@
-const postsUrlRegex = /patreon\.com\/(\w+)\/posts/;
+const postsUrlRegex = /patreon\.com\/(\w+)\/posts\?(.*)/;
 
-let match;
+let match = postsUrlRegex.exec(window.location.href);
 
 browser.runtime.sendMessage({
-	action: "setPageCreator",
+	action: "setPostsPageDetails",
 	data: {
-		creator: (match = postsUrlRegex.exec(window.location.href)) !== null ? match[1] : null
+		creator: match !== null ? match[1] : null,
+		arguments: match !== null ? match[2] : null
 	}
-});	
+});

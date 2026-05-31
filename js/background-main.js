@@ -13,6 +13,9 @@ var useLostAndFound = true; // attachments with file_name = null will be downloa
 // "selective": only collect from creators explicitly enabled via the popup
 var collectionMode = "greedy";
 var knownCreators = {};
+// "everything": download every file type. "selected": only download the groups enabled in mediaTypes.
+var mediaTypeMode = "everything";
+var mediaTypes = { image: true, video: true, audio: true, document: true, font: true, archive: true };
 
 browser.storage.local.get('settings').then((result) => {
 	if (result.hasOwnProperty('settings')) {
@@ -34,6 +37,13 @@ browser.storage.local.get('settings').then((result) => {
 		if (result.settings.hasOwnProperty('knownCreators'))
 			knownCreators = result.settings.knownCreators;
 
+		if (result.settings.hasOwnProperty('mediaTypeMode'))
+			mediaTypeMode = result.settings.mediaTypeMode;
+
+		// merge so groups added in future versions still default to enabled
+		if (result.settings.hasOwnProperty('mediaTypes'))
+			mediaTypes = Object.assign(mediaTypes, result.settings.mediaTypes);
+
 		if (result.settings.hasOwnProperty('concurrentDownloads'))
 			concurrentDownloads = result.settings.concurrentDownloads;
 	}
@@ -50,6 +60,8 @@ function updateSettingsStorage() {
 		debug: debug,
 		collectionMode: collectionMode,
 		knownCreators: knownCreators,
+		mediaTypeMode: mediaTypeMode,
+		mediaTypes: mediaTypes,
 		concurrentDownloads: concurrentDownloads
 	}
 
@@ -69,13 +81,46 @@ function updateSettingsStorage() {
  /* download */
 var concurrentDownloads = 1;
 var downloadPrefix = 'patreon/';
-var mediaExtensions = [
-	'png', 'gif', 'jpg', 'jpeg', 'bmp', 'ai', 'ps', 'svg', 'tif', 'tiff', 'ico', 							// image
-	'mp4', 'webm', 'avi', 'mpg', 'mpeg', 'swf', 'flv', '3gp', '3g2', 'h264', 'mkv', 'mov', 'm4v', 'wmv', 	// video 
-	'ttf', 'otf', 'fon', 'fnt', 																			// font
-	'mp3', 'ogg', 'wav', 'wma', 'mpa', 'mid', 'midi', 'cda', 'aif', 										// sound
-	'zip', '7z', 'rar', 'tar.gz', 'z' 																		// compressed files
-];
+var mediaTypeGroups = {
+	image:    ['png', 'gif', 'jpg', 'jpeg', 'bmp', 'ai', 'ps', 'svg', 'tif', 'tiff', 'ico'],
+	video:    ['mp4', 'webm', 'avi', 'mpg', 'mpeg', 'swf', 'flv', '3gp', '3g2', 'h264', 'mkv', 'mov', 'm4v', 'wmv'],
+	audio:    ['mp3', 'ogg', 'wav', 'wma', 'mpa', 'mid', 'midi', 'cda', 'aif'],
+	document: ['pdf', 'doc', 'docx', 'odt', 'rtf', 'txt', 'md', 'epub'],
+	font:     ['ttf', 'otf', 'fon', 'fnt'],
+	archive:  ['zip', '7z', 'rar', 'tar.gz', 'z']
+};
+// flattened for plain "does this link point at a media file" checks (post content link extraction)
+var mediaExtensions = Object.values(mediaTypeGroups).flat();
+
+// pulls the file extension from a file name or url (ignores #fragment and ?query), lowercased
+function fileExtensionOf(s) {
+	if (!s) return null;
+	let base = s.split('#')[0].split('?')[0];
+	let match = base.match(/\.([a-z0-9]+)$/i);
+	return match ? match[1].toLowerCase() : null;
+}
+
+// classifies a download by its file extension into one of the mediaTypeGroups, or 'unknown'
+function getMediaType(filename, url) {
+	let ext = fileExtensionOf(filename) || fileExtensionOf(url);
+	if (!ext)
+		return 'unknown';
+	for (let group in mediaTypeGroups)
+		if (mediaTypeGroups[group].includes(ext))
+			return group;
+	return 'unknown';
+}
+
+// applies the user's "Download File Types" setting. unknown types are always allowed (fail-open),
+// so the filter only ever removes clearly-categorized groups the user explicitly disabled.
+function isMediaTypeEnabled(filename, url) {
+	if (mediaTypeMode !== "selected")
+		return true;
+	let type = getMediaType(filename, url);
+	if (type === 'unknown')
+		return true;
+	return mediaTypes[type] === true;
+}
 var unknownCreator = "_unknown";
 var LostAndFoundSuffix = "_LostAndFound"
 

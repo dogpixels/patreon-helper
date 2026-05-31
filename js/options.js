@@ -15,6 +15,17 @@ var resetCreatorSelect = document.getElementById("resetCreatorSelect");
 var resetDownloadHistoryButton = document.getElementById("resetDownloadHistoryButton");
 var resetFeedback = document.getElementById("resetFeedback");
 var clearAllButton = document.getElementById("clearAllButton");
+var mediaTypeModeEverything = document.getElementById("mediaTypeModeEverything");
+var mediaTypeModeSelected = document.getElementById("mediaTypeModeSelected");
+var mediaTypeGroupList = document.getElementById("mediaTypeGroupList");
+var mediaTypeCheckboxes = {
+	image: document.getElementById("mediaTypeImage"),
+	video: document.getElementById("mediaTypeVideo"),
+	audio: document.getElementById("mediaTypeAudio"),
+	document: document.getElementById("mediaTypeDocument"),
+	font: document.getElementById("mediaTypeFont"),
+	archive: document.getElementById("mediaTypeArchive")
+};
 // var contentCollectionClearKnownCreatorsButton = document.getElementById("contentCollectionClearKnownCreators");
 
 browser.runtime.getBackgroundPage().then((backgroundContext) => {
@@ -23,6 +34,35 @@ browser.runtime.getBackgroundPage().then((backgroundContext) => {
 	debugCheckbox.checked = backgroundContext.debug;
 	(backgroundContext.collectionMode === "selective" ? collectionModeSelective : collectionModeGreedy).checked = true;
 	contentCollectionKnownCreators.classList.add('open');
+
+	// media type filter
+	(backgroundContext.mediaTypeMode === "selected" ? mediaTypeModeSelected : mediaTypeModeEverything).checked = true;
+	for (let group in mediaTypeCheckboxes)
+		mediaTypeCheckboxes[group].checked = backgroundContext.mediaTypes[group] !== false;
+	updateMediaTypeGroupListState();
+
+	// the group checkboxes only matter in "selected" mode; grey them out otherwise
+	function updateMediaTypeGroupListState() {
+		let enabled = mediaTypeModeSelected.checked;
+		for (let group in mediaTypeCheckboxes)
+			mediaTypeCheckboxes[group].disabled = !enabled;
+		mediaTypeGroupList.style.opacity = enabled ? "1" : "0.5";
+	}
+
+	[mediaTypeModeEverything, mediaTypeModeSelected].forEach(radio => {
+		radio.addEventListener('change', (event) => {
+			backgroundContext.mediaTypeMode = event.target.value;
+			backgroundContext.updateSettingsStorage();
+			updateMediaTypeGroupListState();
+		});
+	});
+
+	for (let group in mediaTypeCheckboxes) {
+		mediaTypeCheckboxes[group].addEventListener('change', (event) => {
+			backgroundContext.mediaTypes[group] = event.target.checked;
+			backgroundContext.updateSettingsStorage();
+		});
+	}
 
 	// open log accordion if debug is enabled
 	if (debugCheckbox.checked)
@@ -163,6 +203,8 @@ browser.runtime.getBackgroundPage().then((backgroundContext) => {
 		backgroundContext.downloadAttachments = true;
 		backgroundContext.useLostAndFound = true;
 		backgroundContext.collectionMode = "greedy";
+		backgroundContext.mediaTypeMode = "everything";
+		backgroundContext.mediaTypes = { image: true, video: true, audio: true, document: true, font: true, archive: true };
 		backgroundContext.concurrentDownloads = 1;
 		backgroundContext.activeDownloads = 0;
 

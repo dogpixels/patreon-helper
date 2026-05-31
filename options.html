@@ -144,6 +144,27 @@
 			<ul id="contentCollectionKnownCreators"></ul>
 		</article>
 		<article>
+			<label style="cursor: default;">
+				<span><strong>Download File Types</strong>: Choose which kinds of files Patreon Helper downloads. This applies to all media and attachments.</span>
+			</label>
+			<label>
+				<input type="radio" name="mediaTypeMode" id="mediaTypeModeEverything" value="everything" />
+				<span><strong>Everything</strong>: Download all file types.</span>
+			</label>
+			<label>
+				<input type="radio" name="mediaTypeMode" id="mediaTypeModeSelected" value="selected" />
+				<span><strong>Only selected types</strong>: Only download the file groups you check below. Files with an unrecognized type are always downloaded.</span>
+			</label>
+			<div id="mediaTypeGroupList" style="padding: 0 8px 16px 32px;">
+				<label><input type="checkbox" id="mediaTypeImage" /> <span>Images <code>(jpg, png, gif, …)</code></span></label>
+				<label><input type="checkbox" id="mediaTypeVideo" /> <span>Videos <code>(mp4, mov, webm, …)</code></span></label>
+				<label><input type="checkbox" id="mediaTypeAudio" /> <span>Audio <code>(mp3, wav, ogg, …)</code></span></label>
+				<label><input type="checkbox" id="mediaTypeDocument" /> <span>Documents <code>(pdf, docx, txt, md, …)</code></span></label>
+				<label><input type="checkbox" id="mediaTypeFont" /> <span>Fonts <code>(ttf, otf, …)</code></span></label>
+				<label><input type="checkbox" id="mediaTypeArchive" /> <span>Archives <code>(zip, rar, 7z, …)</code></span></label>
+			</div>
+		</article>
+		<article>
 			<label>
 				<input type="checkbox" id="downloadAttachments" name="downloadAttachments" />
 				<span><strong>Download Attachments</strong>: Some attachments can only be downloaded in a quirky way that might bother you with a "Save As" dialog for each single file (depending on your Firefox settings) and also download them multiple times to a LostAndFound directory. Enable this option if you don't mind confirming this inconvenience and want to get those additional attachments, too. Otherwise Patreon Helper will ignore them.</span>

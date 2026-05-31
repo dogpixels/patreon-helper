@@ -249,9 +249,9 @@ function extractDownloadInfo(response) {
     
             // /api/stream
             if (
-                incl.type == "media" && 
+                incl.type == "media" &&
                 incl.hasOwnProperty('attributes') &&
-                incl.attributes.hasOwnProperty('download_url') && 
+                incl.attributes.download_url != null && // null for streaming (e.g. Mux/.m3u8) media, which can't be downloaded directly
                 incl.attributes.hasOwnProperty('file_name')
             ) {
                 let name = pageCreator? pageCreator : unknownCreator;
@@ -339,6 +339,12 @@ async function addToDownloads(creator, filename, url) {
     // selective: skip everyone not explicitly enabled via the popup
     if (collectionMode === "selective" && knownCreators[creator] !== true) {
         console.info(`Collection mode selective, creator "${creator}" not enabled; queueing skipped.`);
+        return;
+    }
+
+    // "Download File Types" filter: skip groups the user disabled in the options page
+    if (!isMediaTypeEnabled(filename, url)) {
+        console.info(`media type "${getMediaType(filename, url)}" is disabled; queueing skipped for filename: '${filename}'`);
         return;
     }
 

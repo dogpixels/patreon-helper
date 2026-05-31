@@ -92,6 +92,14 @@ var mediaTypeGroups = {
 // flattened for plain "does this link point at a media file" checks (post content link extraction)
 var mediaExtensions = Object.values(mediaTypeGroups).flat();
 
+// strips any leading directory path from a file name, keeping only the final component.
+// patreon sometimes ships file names that contain a leading path, which would otherwise
+// create unwanted subfolders under the creator directory.
+function baseName(name) {
+	if (!name) return name;
+	return name.split(/[\\/]/).pop();
+}
+
 // pulls the file extension from a file name or url (ignores #fragment and ?query), lowercased
 function fileExtensionOf(s) {
 	if (!s) return null;

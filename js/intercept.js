@@ -147,7 +147,7 @@ function extractDownloadInfo(response) {
                     console.warn(`the aforementioned media on post has been identified affected by 07/2020 Nikofix and has been skipped`);
                 }
                 else {
-                    addToDownloads(name, downloadPrefix + name + "/" + data.attributes.post_file.name, data.attributes.post_file.url);
+                    addToDownloads(name, downloadPrefix + name + "/" + baseName(data.attributes.post_file.name), data.attributes.post_file.url);
                 }
             }
 
@@ -277,7 +277,7 @@ function extractDownloadInfo(response) {
                     console.warn(`/{file_name} was null, replaced it by '${incl.attributes.file_name}'`);
                 }
 
-                addToDownloads(name, `${downloadPrefix}${name}/${incl.attributes.file_name}`, incl.attributes.download_url);
+                addToDownloads(name, `${downloadPrefix}${name}/${baseName(incl.attributes.file_name)}`, incl.attributes.download_url);
             }
 
             // attachments
@@ -298,7 +298,7 @@ function extractDownloadInfo(response) {
                     url: incl.attributes.url
                 });
 
-                addToDownloads(name, downloadPrefix + name + "/" + incl.attributes.name, incl.attributes.url);
+                addToDownloads(name, downloadPrefix + name + "/" + baseName(incl.attributes.name), incl.attributes.url);
             }
         });
     }

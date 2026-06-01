@@ -266,7 +266,10 @@ function extractDownloadInfo(response) {
                     url: incl.attributes.download_url
                 });
 
-                // workaround for when patreon started to null attributes.file_name somewhen in 03/2020
+                // workaround for when patreon started to null attributes.file_name somewhen in 03/2020.
+                // the creator name stays unchanged so registration and selective-mode filtering still
+                // match the real creator; these uncertain files just land in a <creator>/LostAndFound/ subfolder.
+                let lostAndFound = false;
                 if (incl.attributes.file_name == null) {
                     if (!useLostAndFound) {
                         console.warn(`/{file_name} was null, but user setting useLostAndFound is disabled; operation skipped`)
@@ -274,11 +277,11 @@ function extractDownloadInfo(response) {
                     }
 
                     incl.attributes.file_name = new Date().getTime() + '-' + Math.floor(Math.random() * 1024) + '.jpg';
-                    name += LostAndFoundSuffix;
+                    lostAndFound = true;
                     console.warn(`/{file_name} was null, replaced it by '${incl.attributes.file_name}'`);
                 }
 
-                addToDownloads(name, buildDownloadPath(name, baseName(incl.attributes.file_name), incl.attributes.download_url), incl.attributes.download_url);
+                addToDownloads(name, buildDownloadPath(name, baseName(incl.attributes.file_name), incl.attributes.download_url, lostAndFound), incl.attributes.download_url);
             }
 
             // attachments

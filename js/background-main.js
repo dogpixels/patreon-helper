@@ -8,7 +8,6 @@ var dbVersion = 3;
 
 /* options */
 var downloadAttachments = true; // attachments currently only download with a "Save As" dialog; If false, these files will be ignored.
-var useLostAndFound = true; // media with file_name = null will be downloaded with a random generated file name into <creator>/LostAndFound/
 // "greedy": collect from all creators by default, individual creators can be disabled
 // "selective": only collect from creators explicitly enabled via the popup
 var collectionMode = "greedy";
@@ -24,9 +23,6 @@ browser.storage.local.get('settings').then((result) => {
 		if (result.settings.hasOwnProperty('downloadAttachments'))
 			downloadAttachments = result.settings.downloadAttachments;
 		
-		if (result.settings.hasOwnProperty('useLostAndFound'))
-			useLostAndFound = result.settings.useLostAndFound;
-	
 		if (result.settings.hasOwnProperty('debug'))
 			debug = result.settings.debug;
 	
@@ -61,7 +57,6 @@ browser.storage.local.get('settings').then((result) => {
 function updateSettingsStorage() {
 	let settings = {
 		downloadAttachments: downloadAttachments,
-		useLostAndFound: useLostAndFound,
 		debug: debug,
 		collectionMode: collectionMode,
 		knownCreators: knownCreators,
@@ -144,19 +139,14 @@ var mediaTypeFolders = {
 
 // builds the full relative download path for a file. in "byType" mode a media-type
 // subfolder is inserted between the creator folder and the file (<creator>/images/foo.png).
-// when lostAndFound is set, the file goes into the dedicated <creator>/LostAndFound/
-// subfolder instead (and is not split by type, since its name is only guessed).
 // fileName is expected to already be a bare file name (see baseName).
-function buildDownloadPath(creator, fileName, url, lostAndFound) {
+function buildDownloadPath(creator, fileName, url) {
 	let path = downloadPrefix + creator + "/";
-	if (lostAndFound)
-		path += LostAndFoundFolder + "/";
-	else if (storageMode === "byType")
+	if (storageMode === "byType")
 		path += (mediaTypeFolders[getMediaType(fileName, url)] || 'other') + "/";
 	return path + fileName;
 }
 var unknownCreator = "_unknown";
-var LostAndFoundFolder = "LostAndFound";
 
 console.info("patreon helper 1.15 loaded");
 

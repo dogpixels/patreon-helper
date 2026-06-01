@@ -4,7 +4,6 @@
  */
 
 var downloadAttachmentsCheckbox = document.getElementById("downloadAttachments");
-var useLostAndFoundCheckbox = document.getElementById("useLostAndFound");
 var debugCheckbox = document.getElementById("debug");
 var logCache = document.getElementById("logCache");
 var logCopyButton = document.getElementById("logCopy");
@@ -32,7 +31,6 @@ var storageModeByType = document.getElementById("storageModeByType");
 
 browser.runtime.getBackgroundPage().then((backgroundContext) => {
 	downloadAttachmentsCheckbox.checked = backgroundContext.downloadAttachments;
-	useLostAndFoundCheckbox.checked = backgroundContext.useLostAndFound;
 	debugCheckbox.checked = backgroundContext.debug;
 	(backgroundContext.collectionMode === "selective" ? collectionModeSelective : collectionModeGreedy).checked = true;
 	contentCollectionKnownCreators.classList.add('open');
@@ -82,11 +80,6 @@ browser.runtime.getBackgroundPage().then((backgroundContext) => {
 
 	downloadAttachmentsCheckbox.addEventListener('change', (event) => {
 		backgroundContext.downloadAttachments = event.target.checked;
-		backgroundContext.updateSettingsStorage();
-	});
-
-	useLostAndFoundCheckbox.addEventListener('change', (event) => {
-		backgroundContext.useLostAndFound = event.target.checked;
 		backgroundContext.updateSettingsStorage();
 	});
 
@@ -213,7 +206,6 @@ browser.runtime.getBackgroundPage().then((backgroundContext) => {
 
 		backgroundContext.knownCreators = {};
 		backgroundContext.downloadAttachments = true;
-		backgroundContext.useLostAndFound = true;
 		backgroundContext.collectionMode = "greedy";
 		backgroundContext.mediaTypeMode = "everything";
 		backgroundContext.mediaTypes = { image: true, video: true, audio: true, document: true, font: true, archive: true };

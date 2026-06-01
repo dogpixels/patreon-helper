@@ -180,13 +180,7 @@
 		<article>
 			<label>
 				<input type="checkbox" id="downloadAttachments" name="downloadAttachments" />
-				<span><strong>Download Attachments</strong>: Some attachments can only be downloaded in a quirky way that might bother you with a "Save As" dialog for each single file (depending on your Firefox settings) and also download them multiple times to a LostAndFound directory. Enable this option if you don't mind confirming this inconvenience and want to get those additional attachments, too. Otherwise Patreon Helper will ignore them.</span>
-			</label>
-		</article>
-		<article>
-			<label>
-				<input type="checkbox" id="useLostAndFound" name="useLostAndFound" />
-				<span><strong>Use Lost&Found Directory</strong>: Patreon Helper sometimes cannot identify a file name and whether this file has already been downloaded. In such cases, and if this option is enabled, those uncertain files will be downloaded to the creator's <code>&lt;creator&gt;/LostAndFound</code> subfolder every time you surf Patreon.</span>
+				<span><strong>Download Attachments</strong>: Some attachments are hosted in a way Patreon Helper can't save into the creator folder directly. They are opened in a background tab so your browser downloads them &mdash; depending on your Firefox settings this may show a "Save As" dialog and save them to your default downloads folder instead of the <code>patreon/&lt;creator&gt;</code> structure. Enable this if you don't mind that and want those attachments too; otherwise Patreon Helper ignores them.</span>
 			</label>
 		</article>
 		<article>

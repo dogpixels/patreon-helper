@@ -147,7 +147,7 @@ function extractDownloadInfo(response) {
                     console.warn(`the aforementioned media on post has been identified affected by 07/2020 Nikofix and has been skipped`);
                 }
                 else {
-                    addToDownloads(name, buildDownloadPath(name, baseName(data.attributes.post_file.name), data.attributes.post_file.url), data.attributes.post_file.url, objectIdentifier("media", data.attributes.post_file.media_id));
+                    addToDownloads(name, baseName(data.attributes.post_file.name), data.attributes.post_file.url, objectIdentifier("media", data.attributes.post_file.media_id));
                 }
             }
 
@@ -157,7 +157,7 @@ function extractDownloadInfo(response) {
                 findMediaUrls(data.attributes.content).forEach(url => {
                     console.info(`url found in post content, url:`, url);
                     let file = url.split('/').pop().split('#')[0].split('?')[0];
-                    addToDownloads(name, buildDownloadPath(name, file, url), url);
+                    addToDownloads(name, file, url);
                 });
             }
 
@@ -274,7 +274,7 @@ function extractDownloadInfo(response) {
                     console.warn(`file_name was null, replaced it by '${incl.attributes.file_name}'`);
                 }
 
-                addToDownloads(name, buildDownloadPath(name, baseName(incl.attributes.file_name), incl.attributes.download_url), incl.attributes.download_url, objectIdentifier("media", incl.id));
+                addToDownloads(name, baseName(incl.attributes.file_name), incl.attributes.download_url, objectIdentifier("media", incl.id));
             }
 
             // attachments
@@ -295,7 +295,7 @@ function extractDownloadInfo(response) {
                     url: incl.attributes.url
                 });
 
-                addToDownloads(name, buildDownloadPath(name, baseName(incl.attributes.name), incl.attributes.url), incl.attributes.url, objectIdentifier("attachment", incl.id));
+                addToDownloads(name, baseName(incl.attributes.name), incl.attributes.url, objectIdentifier("attachment", incl.id));
             }
         });
     }
@@ -322,8 +322,12 @@ function findMediaUrls(text) {
     return ret;
 }
 
-async function addToDownloads(creator, filename, url, identifier) {
+async function addToDownloads(creator, fileName, url, identifier) {
     registerCreator(creator);
+
+    // build the on-disk path here so callers only pass the bare file name (and don't
+    // have to repeat creator/url for buildDownloadPath on top of passing them to us)
+    let filename = buildDownloadPath(creator, fileName, url);
 
     console.info(`Queueing: creator: "${creator}", filename: "${filename}", url: "${url}"`);
 

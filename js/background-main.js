@@ -16,6 +16,8 @@ var knownCreators = {};
 // "everything": download every file type. "selected": only download the groups enabled in mediaTypes.
 var mediaTypeMode = "everything";
 var mediaTypes = { image: true, video: true, audio: true, document: true, font: true, archive: true };
+// "flat": store files directly under <creator>/. "byType": sort into <creator>/images, <creator>/videos, ...
+var storageMode = "flat";
 
 browser.storage.local.get('settings').then((result) => {
 	if (result.hasOwnProperty('settings')) {
@@ -44,6 +46,9 @@ browser.storage.local.get('settings').then((result) => {
 		if (result.settings.hasOwnProperty('mediaTypes'))
 			mediaTypes = Object.assign(mediaTypes, result.settings.mediaTypes);
 
+		if (result.settings.hasOwnProperty('storageMode'))
+			storageMode = result.settings.storageMode;
+
 		if (result.settings.hasOwnProperty('concurrentDownloads'))
 			concurrentDownloads = result.settings.concurrentDownloads;
 	}
@@ -62,6 +67,7 @@ function updateSettingsStorage() {
 		knownCreators: knownCreators,
 		mediaTypeMode: mediaTypeMode,
 		mediaTypes: mediaTypes,
+		storageMode: storageMode,
 		concurrentDownloads: concurrentDownloads
 	}
 
@@ -128,6 +134,22 @@ function isMediaTypeEnabled(filename, url) {
 	if (type === 'unknown')
 		return true;
 	return mediaTypes[type] === true;
+}
+
+// subfolder names used when storageMode is "byType"; unrecognized types land in "other"
+var mediaTypeFolders = {
+	image: 'images', video: 'videos', audio: 'audio',
+	document: 'documents', font: 'fonts', archive: 'archives', unknown: 'other'
+};
+
+// builds the full relative download path for a file. in "byType" mode a media-type
+// subfolder is inserted between the creator folder and the file (<creator>/images/foo.png).
+// fileName is expected to already be a bare file name (see baseName).
+function buildDownloadPath(creator, fileName, url) {
+	let path = downloadPrefix + creator + "/";
+	if (storageMode === "byType")
+		path += (mediaTypeFolders[getMediaType(fileName, url)] || 'other') + "/";
+	return path + fileName;
 }
 var unknownCreator = "_unknown";
 var LostAndFoundSuffix = "_LostAndFound"

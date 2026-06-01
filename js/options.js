@@ -26,6 +26,8 @@ var mediaTypeCheckboxes = {
 	font: document.getElementById("mediaTypeFont"),
 	archive: document.getElementById("mediaTypeArchive")
 };
+var storageModeFlat = document.getElementById("storageModeFlat");
+var storageModeByType = document.getElementById("storageModeByType");
 // var contentCollectionClearKnownCreatorsButton = document.getElementById("contentCollectionClearKnownCreators");
 
 browser.runtime.getBackgroundPage().then((backgroundContext) => {
@@ -63,6 +65,16 @@ browser.runtime.getBackgroundPage().then((backgroundContext) => {
 			backgroundContext.updateSettingsStorage();
 		});
 	}
+
+	// folder structure
+	(backgroundContext.storageMode === "byType" ? storageModeByType : storageModeFlat).checked = true;
+
+	[storageModeFlat, storageModeByType].forEach(radio => {
+		radio.addEventListener('change', (event) => {
+			backgroundContext.storageMode = event.target.value;
+			backgroundContext.updateSettingsStorage();
+		});
+	});
 
 	// open log accordion if debug is enabled
 	if (debugCheckbox.checked)
@@ -205,6 +217,7 @@ browser.runtime.getBackgroundPage().then((backgroundContext) => {
 		backgroundContext.collectionMode = "greedy";
 		backgroundContext.mediaTypeMode = "everything";
 		backgroundContext.mediaTypes = { image: true, video: true, audio: true, document: true, font: true, archive: true };
+		backgroundContext.storageMode = "flat";
 		backgroundContext.concurrentDownloads = 1;
 		backgroundContext.activeDownloads = 0;
 

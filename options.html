@@ -165,6 +165,19 @@
 			</div>
 		</article>
 		<article>
+			<label style="cursor: default;">
+				<span><strong>Folder Structure</strong>: Choose how downloaded files are organized on disk.</span>
+			</label>
+			<label>
+				<input type="radio" name="storageMode" id="storageModeFlat" value="flat" />
+				<span><strong>Flat</strong>: All files go directly into the creator's folder (<code>patreon/&lt;creator&gt;/file</code>).</span>
+			</label>
+			<label>
+				<input type="radio" name="storageMode" id="storageModeByType" value="byType" />
+				<span><strong>By file type</strong>: Sort files into type subfolders (<code>patreon/&lt;creator&gt;/images</code>, <code>/videos</code>, <code>/audio</code>, <code>/documents</code>, <code>/fonts</code>, <code>/archives</code>, <code>/other</code>).</span>
+			</label>
+		</article>
+		<article>
 			<label>
 				<input type="checkbox" id="downloadAttachments" name="downloadAttachments" />
 				<span><strong>Download Attachments</strong>: Some attachments can only be downloaded in a quirky way that might bother you with a "Save As" dialog for each single file (depending on your Firefox settings) and also download them multiple times to a LostAndFound directory. Enable this option if you don't mind confirming this inconvenience and want to get those additional attachments, too. Otherwise Patreon Helper will ignore them.</span>

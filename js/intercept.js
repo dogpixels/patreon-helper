@@ -8,6 +8,8 @@ var streamUrls = [
     '*://*.patreon.com/api/posts*'
 ];
 var identifierRegex = /\/post\/\d*\/(\w*)\/|file\?(h\=\d*\&i\=\w*)/;
+var db;
+var names = {};
 
 // extracts the creator's vanity slug from any patreon profile/checkout/join url
 function extractVanityFromUrl(url) {
@@ -56,9 +58,6 @@ function resolveCreatorName(post, response) {
     // last resort: the creator detected from the page url, else unknown
     return pageCreator ? pageCreator : unknownCreator;
 }
-
-var db;
-var names = {};
 
 function interceptStreamResponse(details) {
     console.info(`intercepting api request id '${details.requestId}'`);
@@ -147,7 +146,7 @@ function extractDownloadInfo(response) {
                     console.warn(`the aforementioned media on post has been identified affected by 07/2020 Nikofix and has been skipped`);
                 }
                 else {
-                    addToDownloads(name, downloadPrefix + name + "/" + data.attributes.post_file.name, data.attributes.post_file.url);
+                    addToDownloads(name, baseName(data.attributes.post_file.name), data.attributes.post_file.url, objectIdentifier("media", data.attributes.post_file.media_id));
                 }
             }
 
@@ -156,7 +155,8 @@ function extractDownloadInfo(response) {
                 console.log(`'content' found in post response; searching for media links; data.attributes.content:`, data.attributes.content);
                 findMediaUrls(data.attributes.content).forEach(url => {
                     console.info(`url found in post content, url:`, url);
-                    addToDownloads(name, downloadPrefix + name + "/" + url.split('/').pop().split('#')[0].split('?')[0], url);
+                    let file = url.split('/').pop().split('#')[0].split('?')[0];
+                    addToDownloads(name, file, url);
                 });
             }
 
@@ -249,9 +249,9 @@ function extractDownloadInfo(response) {
     
             // /api/stream
             if (
-                incl.type == "media" && 
+                incl.type == "media" &&
                 incl.hasOwnProperty('attributes') &&
-                incl.attributes.hasOwnProperty('download_url') && 
+                incl.attributes.download_url != null && // null for streaming (e.g. Mux/.m3u8) media, which can't be downloaded directly
                 incl.attributes.hasOwnProperty('file_name')
             ) {
                 let name = pageCreator? pageCreator : unknownCreator;
@@ -265,19 +265,15 @@ function extractDownloadInfo(response) {
                     url: incl.attributes.download_url
                 });
 
-                // workaround for when patreon started to null attributes.file_name somewhen in 03/2020
+                // patreon nulls attributes.file_name for some media (since ~03/2020). we still have a
+                // stable media id, so name the file after it (<id>.<ext>) and treat it like any other
+                // download. the extension is taken from the url, since the original name is unknown.
                 if (incl.attributes.file_name == null) {
-                    if (!useLostAndFound) {
-                        console.warn(`/{file_name} was null, but user setting useLostAndFound is disabled; operation skipped`)
-                        return;
-                    }
-
-                    incl.attributes.file_name = new Date().getTime() + '-' + Math.floor(Math.random() * 1024) + '.jpg';
-                    name += LostAndFoundSuffix;
-                    console.warn(`/{file_name} was null, replaced it by '${incl.attributes.file_name}'`);
+                    incl.attributes.file_name = incl.id + "." + (fileExtensionOf(incl.attributes.download_url) || "jpg");
+                    console.warn(`file_name was null, replaced it by '${incl.attributes.file_name}'`);
                 }
 
-                addToDownloads(name, `${downloadPrefix}${name}/${incl.attributes.file_name}`, incl.attributes.download_url);
+                addToDownloads(name, baseName(incl.attributes.file_name), incl.attributes.download_url, objectIdentifier("media", incl.id));
             }
 
             // attachments
@@ -298,7 +294,7 @@ function extractDownloadInfo(response) {
                     url: incl.attributes.url
                 });
 
-                addToDownloads(name, downloadPrefix + name + "/" + incl.attributes.name, incl.attributes.url);
+                addToDownloads(name, baseName(incl.attributes.name), incl.attributes.url, objectIdentifier("attachment", incl.id));
             }
         });
     }
@@ -325,10 +321,22 @@ function findMediaUrls(text) {
     return ret;
 }
 
-async function addToDownloads(creator, filename, url) {
+async function addToDownloads(creator, fileName, url, identifier) {
     registerCreator(creator);
 
+    // build the on-disk path here so callers only pass the bare file name (and don't
+    // have to repeat creator/url for buildDownloadPath on top of passing them to us)
+    let filename = buildDownloadPath(creator, fileName, url);
+
     console.info(`Queueing: creator: "${creator}", filename: "${filename}", url: "${url}"`);
+
+    // Mux-hosted video (stream.mux.com / image.mux.com) uses player-only signed tokens; a direct
+    // fetch returns {"error":...,"type":"not_authorized"}. these can't be downloaded as a plain file,
+    // and since the host isn't patreonusercontent.com they'd otherwise be opened in a useless tab.
+    if (url && url.includes('mux.com')) {
+        console.info(`Mux URL is not directly downloadable; queueing skipped; url: '${url}'`);
+        return;
+    }
 
     // greedy: skip only creators the user explicitly disabled
     if (collectionMode === "greedy" && knownCreators[creator] === false) {
@@ -342,12 +350,21 @@ async function addToDownloads(creator, filename, url) {
         return;
     }
 
+    // "Download File Types" filter: skip groups the user disabled in the options page
+    if (!isMediaTypeEnabled(filename, url)) {
+        console.info(`media type "${getMediaType(filename, url)}" is disabled; queueing skipped for filename: '${filename}'`);
+        return;
+    }
+
     if (!db) {
         console.warn(`database not ready, skipping; filename: '${filename}', url: '${url}'`);
         return;
     }
 
-    let identifier = determineFileIdentifier(filename, url);
+    // prefer a stable Patreon object id (media/attachment) as the dedup key when the caller
+    // provides one; only external links scraped from post text fall back to parsing the url.
+    if (!identifier)
+        identifier = determineFileIdentifier(filename, url);
 
     let store = db.transaction("downloads", "readwrite").objectStore("downloads");
     let getRequest = store.index("identifier").get(IDBKeyRange.only(identifier));
@@ -400,6 +417,12 @@ function determineFileIdentifier(filename, url) {
     // that should not occur
     console.error("identifier search: unhandled matches, filename will be used; matches:", matches);
     return filename;
+}
+
+// builds a stable dedup identifier from a Patreon object id (e.g. "media-672366612"),
+// or undefined when no id is available (then the caller falls back to the url).
+function objectIdentifier(type, id) {
+    return id != null ? type + "-" + id : undefined;
 }
 
 browser.webRequest.onBeforeRequest.addListener(

@@ -115,7 +115,10 @@
 		<h1>Patreon Helper</h1>
 		<h2>News</h2>
 		<p>
-			<strong>0/2026 (2.2)</strong> Robuster name identification and reset behavior.
+			<strong>06/2026 (2.3)</strong> New options to pick which file types to download and how to organize them into folders. Media is now identified by its Patreon ID, so content collected before this update will be downloaded once more.
+		</p>
+		<p>
+			<strong>05/2026 (2.2)</strong> More robust name identification and reset behavior.
 		</p>
 		<p>
 			<strong>05/2026 (2.1)</strong> Prevent endless retry loops.
@@ -144,15 +147,43 @@
 			<ul id="contentCollectionKnownCreators"></ul>
 		</article>
 		<article>
+			<label style="cursor: default;">
+				<span><strong>Download File Types</strong>: Choose which kinds of files Patreon Helper downloads. This applies to all media and attachments.</span>
+			</label>
 			<label>
-				<input type="checkbox" id="downloadAttachments" name="downloadAttachments" />
-				<span><strong>Download Attachments</strong>: Some attachments can only be downloaded in a quirky way that might bother you with a "Save As" dialog for each single file (depending on your Firefox settings) and also download them multiple times to a LostAndFound directory. Enable this option if you don't mind confirming this inconvenience and want to get those additional attachments, too. Otherwise Patreon Helper will ignore them.</span>
+				<input type="radio" name="mediaTypeMode" id="mediaTypeModeEverything" value="everything" />
+				<span><strong>Everything</strong>: Download all file types.</span>
+			</label>
+			<label>
+				<input type="radio" name="mediaTypeMode" id="mediaTypeModeSelected" value="selected" />
+				<span><strong>Only selected types</strong>: Only download the file groups you check below. Files with an unrecognized type are always downloaded.</span>
+			</label>
+			<div id="mediaTypeGroupList" style="padding: 0 8px 16px 32px;">
+				<label><input type="checkbox" id="mediaTypeImage" /> <span>Images <code>(jpg, png, gif, …)</code></span></label>
+				<label><input type="checkbox" id="mediaTypeVideo" /> <span>Videos <code>(mp4, mov, webm, …)</code></span></label>
+				<label><input type="checkbox" id="mediaTypeAudio" /> <span>Audio <code>(mp3, wav, ogg, …)</code></span></label>
+				<label><input type="checkbox" id="mediaTypeDocument" /> <span>Documents <code>(pdf, docx, txt, md, …)</code></span></label>
+				<label><input type="checkbox" id="mediaTypeFont" /> <span>Fonts <code>(ttf, otf, …)</code></span></label>
+				<label><input type="checkbox" id="mediaTypeArchive" /> <span>Archives <code>(zip, rar, 7z, …)</code></span></label>
+			</div>
+		</article>
+		<article>
+			<label style="cursor: default;">
+				<span><strong>Folder Structure</strong>: Choose how downloaded files are organized on disk.</span>
+			</label>
+			<label>
+				<input type="radio" name="storageMode" id="storageModeFlat" value="flat" />
+				<span><strong>Flat</strong>: All files go directly into the creator's folder (<code>patreon/&lt;creator&gt;/file</code>).</span>
+			</label>
+			<label>
+				<input type="radio" name="storageMode" id="storageModeByType" value="byType" />
+				<span><strong>By file type</strong>: Sort files into type subfolders (<code>patreon/&lt;creator&gt;/images</code>, <code>/videos</code>, <code>/audio</code>, <code>/documents</code>, <code>/fonts</code>, <code>/archives</code>, <code>/other</code>).</span>
 			</label>
 		</article>
 		<article>
 			<label>
-				<input type="checkbox" id="useLostAndFound" name="useLostAndFound" />
-				<span><strong>Use Lost&Found Directory</strong>: Patreon Helper sometimes cannot identify a file name and whether this file has already been downloaded. In such cases, and if this option is enabled, those uncertain files will be downloaded to <code>{ArtistName}_LostAndFound</code> every time you surf Patreon.</span>
+				<input type="checkbox" id="downloadAttachments" name="downloadAttachments" />
+				<span><strong>Download Attachments</strong>: Some attachments are hosted in a way Patreon Helper can't save into the creator folder directly. They are opened in a background tab so your browser downloads them &mdash; depending on your Firefox settings this may show a "Save As" dialog and save them to your default downloads folder instead of the <code>patreon/&lt;creator&gt;</code> structure. Enable this if you don't mind that and want those attachments too; otherwise Patreon Helper ignores them.</span>
 			</label>
 		</article>
 		<article>

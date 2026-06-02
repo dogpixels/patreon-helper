@@ -27,7 +27,14 @@ var mediaTypeCheckboxes = {
 };
 var storageModeFlat = document.getElementById("storageModeFlat");
 var storageModeByType = document.getElementById("storageModeByType");
-// var contentCollectionClearKnownCreatorsButton = document.getElementById("contentCollectionClearKnownCreators");
+
+// the group checkboxes only matter in "selected" mode; grey them out otherwise
+function updateMediaTypeGroupListState() {
+	let enabled = mediaTypeModeSelected.checked;
+	for (let group in mediaTypeCheckboxes)
+		mediaTypeCheckboxes[group].disabled = !enabled;
+	mediaTypeGroupList.style.opacity = enabled ? "1" : "0.5";
+}
 
 browser.runtime.getBackgroundPage().then((backgroundContext) => {
 	downloadAttachmentsCheckbox.checked = backgroundContext.downloadAttachments;
@@ -40,14 +47,6 @@ browser.runtime.getBackgroundPage().then((backgroundContext) => {
 	for (let group in mediaTypeCheckboxes)
 		mediaTypeCheckboxes[group].checked = backgroundContext.mediaTypes[group] !== false;
 	updateMediaTypeGroupListState();
-
-	// the group checkboxes only matter in "selected" mode; grey them out otherwise
-	function updateMediaTypeGroupListState() {
-		let enabled = mediaTypeModeSelected.checked;
-		for (let group in mediaTypeCheckboxes)
-			mediaTypeCheckboxes[group].disabled = !enabled;
-		mediaTypeGroupList.style.opacity = enabled ? "1" : "0.5";
-	}
 
 	[mediaTypeModeEverything, mediaTypeModeSelected].forEach(radio => {
 		radio.addEventListener('change', (event) => {

@@ -1,4 +1,4 @@
-/*	
+/*
  *	Patreon Helper for Firefox
  * 	draconigen@gmail.com
  */
@@ -17,15 +17,40 @@ var mediaTypeMode = "everything";
 var mediaTypes = { image: true, video: true, audio: true, document: true, font: true, archive: true };
 // "flat": store files directly under <creator>/. "byType": sort into <creator>/images, <creator>/videos, ...
 var storageMode = "flat";
+var concurrentDownloads = 1;
+
+/* download */
+var downloadPrefix = 'patreon/';
+var mediaTypeGroups = {
+	image:    ['png', 'gif', 'jpg', 'jpeg', 'bmp', 'ai', 'ps', 'svg', 'tif', 'tiff', 'ico'],
+	video:    ['mp4', 'webm', 'avi', 'mpg', 'mpeg', 'swf', 'flv', '3gp', '3g2', 'h264', 'mkv', 'mov', 'm4v', 'wmv'],
+	audio:    ['mp3', 'ogg', 'wav', 'wma', 'mpa', 'mid', 'midi', 'cda', 'aif'],
+	document: ['pdf', 'doc', 'docx', 'odt', 'rtf', 'txt', 'md', 'epub'],
+	font:     ['ttf', 'otf', 'fon', 'fnt'],
+	archive:  ['zip', '7z', 'rar', 'tar.gz', 'z']
+};
+// flattened for plain "does this link point at a media file" checks (post content link extraction)
+var mediaExtensions = Object.values(mediaTypeGroups).flat();
+// subfolder names used when storageMode is "byType"; unrecognized types land in "other"
+var mediaTypeFolders = {
+	image: 'images', video: 'videos', audio: 'audio',
+	document: 'documents', font: 'fonts', archive: 'archives', unknown: 'other'
+};
+var unknownCreator = "_unknown";
+
+/* state */
+var pageCreator = null;
+
+console.info("patreon helper loaded");
 
 browser.storage.local.get('settings').then((result) => {
 	if (result.hasOwnProperty('settings')) {
 		if (result.settings.hasOwnProperty('downloadAttachments'))
 			downloadAttachments = result.settings.downloadAttachments;
-		
+
 		if (result.settings.hasOwnProperty('debug'))
 			debug = result.settings.debug;
-	
+
 		if (result.settings.hasOwnProperty('collectionMode'))
 			collectionMode = result.settings.collectionMode;
 		else if (result.settings.hasOwnProperty('contentCollectionEnabled'))
@@ -72,26 +97,12 @@ function updateSettingsStorage() {
 	.then(
 		() => {
 			// console.info('wrote settings to localStorage:', settings);
-		}, 
+		},
 		(error) => {
 			console.error('failed to write settings to localStorage, details:', error);
 		}
 	);
 }
-
- /* download */
-var concurrentDownloads = 1;
-var downloadPrefix = 'patreon/';
-var mediaTypeGroups = {
-	image:    ['png', 'gif', 'jpg', 'jpeg', 'bmp', 'ai', 'ps', 'svg', 'tif', 'tiff', 'ico'],
-	video:    ['mp4', 'webm', 'avi', 'mpg', 'mpeg', 'swf', 'flv', '3gp', '3g2', 'h264', 'mkv', 'mov', 'm4v', 'wmv'],
-	audio:    ['mp3', 'ogg', 'wav', 'wma', 'mpa', 'mid', 'midi', 'cda', 'aif'],
-	document: ['pdf', 'doc', 'docx', 'odt', 'rtf', 'txt', 'md', 'epub'],
-	font:     ['ttf', 'otf', 'fon', 'fnt'],
-	archive:  ['zip', '7z', 'rar', 'tar.gz', 'z']
-};
-// flattened for plain "does this link point at a media file" checks (post content link extraction)
-var mediaExtensions = Object.values(mediaTypeGroups).flat();
 
 // strips any leading directory path from a file name, keeping only the final component.
 // patreon sometimes ships file names that contain a leading path, which would otherwise
@@ -131,12 +142,6 @@ function isMediaTypeEnabled(filename, url) {
 	return mediaTypes[type] === true;
 }
 
-// subfolder names used when storageMode is "byType"; unrecognized types land in "other"
-var mediaTypeFolders = {
-	image: 'images', video: 'videos', audio: 'audio',
-	document: 'documents', font: 'fonts', archive: 'archives', unknown: 'other'
-};
-
 // builds the full relative download path for a file. in "byType" mode a media-type
 // subfolder is inserted between the creator folder and the file (<creator>/images/foo.png).
 // fileName is expected to already be a bare file name (see baseName).
@@ -146,11 +151,7 @@ function buildDownloadPath(creator, fileName, url) {
 		path += (mediaTypeFolders[getMediaType(fileName, url)] || 'other') + "/";
 	return path + fileName;
 }
-var unknownCreator = "_unknown";
 
-console.info("patreon helper 1.15 loaded");
-
-var pageCreator = null;
 browser.runtime.onMessage.addListener((request, sender) => {
 	console.info(`Runtime Message received. Action: "${request.action}" from ${sender.tab.active? "active ": ""}tab with url "${sender.tab.url}"`, request);
 

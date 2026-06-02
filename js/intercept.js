@@ -8,6 +8,8 @@ var streamUrls = [
     '*://*.patreon.com/api/posts*'
 ];
 var identifierRegex = /\/post\/\d*\/(\w*)\/|file\?(h\=\d*\&i\=\w*)/;
+var db;
+var names = {};
 
 // extracts the creator's vanity slug from any patreon profile/checkout/join url
 function extractVanityFromUrl(url) {
@@ -56,9 +58,6 @@ function resolveCreatorName(post, response) {
     // last resort: the creator detected from the page url, else unknown
     return pageCreator ? pageCreator : unknownCreator;
 }
-
-var db;
-var names = {};
 
 function interceptStreamResponse(details) {
     console.info(`intercepting api request id '${details.requestId}'`);

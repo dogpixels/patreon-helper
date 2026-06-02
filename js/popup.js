@@ -6,10 +6,23 @@ browser.runtime.getBackgroundPage().then(bg => {
 	const toggleCreatorBtn = document.getElementById('toggleCreatorButton');
 	const concurrentDownloadsInput = document.getElementById('concurrentDownloadsInput');
 	const openSettingsPageEl = document.getElementById('openSettingsPageLink');
+	const creatorRow = document.getElementById('creatorRow');
+	const homeFeedInfoEl = document.getElementById('homeFeedInfo');
+	const feedModeEl = document.getElementById('feedMode');
+	const feedHintEl = document.getElementById('feedHint');
+	let activeTabUrl = null;
 
 	function updateCreator() {
 		let creator = bg.pageCreator;
+		// the home feed (patreon.com/home) has no single creator — it mixes posts from
+		// every creator you follow, so we show feed-level info instead of a creator toggle.
+		let isHomeFeed = activeTabUrl && /patreon\.com\/home\b/.test(activeTabUrl);
+
 		if (creator) {
+			creatorRow.style.display = '';
+			toggleCreatorBtn.style.display = '';
+			homeFeedInfoEl.style.display = 'none';
+
 			currentCreatorEl.textContent = creator;
 			currentCreatorEl.classList.remove('unknown');
 
@@ -17,7 +30,19 @@ browser.runtime.getBackgroundPage().then(bg => {
 			toggleCreatorBtn.disabled = false;
 			toggleCreatorBtn.textContent = enabled ? `Disable "${creator}"` : `Enable "${creator}"`;
 			toggleCreatorBtn.classList.toggle('secondary', enabled);
+		} else if (isHomeFeed) {
+			creatorRow.style.display = 'none';
+			toggleCreatorBtn.style.display = 'none';
+			homeFeedInfoEl.style.display = '';
+
+			let selective = bg.collectionMode === 'selective';
+			feedModeEl.textContent = selective ? 'Selective' : 'Greedy';
+			feedHintEl.style.display = selective ? '' : 'none';
 		} else {
+			creatorRow.style.display = '';
+			toggleCreatorBtn.style.display = '';
+			homeFeedInfoEl.style.display = 'none';
+
 			currentCreatorEl.textContent = 'not detected';
 			currentCreatorEl.classList.add('unknown');
 			toggleCreatorBtn.disabled = true;
@@ -79,6 +104,8 @@ browser.runtime.getBackgroundPage().then(bg => {
 
 	browser.tabs.query({active: true, currentWindow: true}).then(tabs => {
 		if (!tabs[0]) { updateCreator(); updateStats(); return; }
+
+		activeTabUrl = tabs[0].url;
 
 		// disable interactive controls and show a notice when not on the target site
 		let isPatreonTab = tabs[0].url && tabs[0].url.includes('patreon.com');

@@ -115,11 +115,24 @@
 	<div id="notPatreonNotice">Not on a Patreon tab</div>
 
 	<section>
-		<div class="row">
+		<div class="row" id="creatorRow">
 			<span class="label">Current creator</span>
 			<span class="value unknown" id="currentCreator">not detected</span>
 		</div>
 		<button id="toggleCreatorButton" disabled style="margin-top: 6px;">No creator detected</button>
+
+		<div id="homeFeedInfo" style="display: none;">
+			<div class="row">
+				<span class="value">Home Feed detected</span>
+			</div>
+			<div class="row">
+				<span class="label">Mode</span>
+				<span class="value" id="feedMode">…</span>
+			</div>
+			<div id="feedHint" style="display: none; margin-top: 6px; color: #888; font-size: 12px; font-style: italic;">
+				You might need to activate creators first (see below).
+			</div>
+		</div>
 	</section>
 
 	<section>
@@ -146,7 +159,7 @@
 	</section>
 
 	<section>
-		<span style="color: #aaa; font-size: 12px; font-style: italic;">To reset download history, use the <a href="#" id="openSettingsPageLink">addon settings page</a>.</span>
+		<span style="color: #aaa; font-size: 12px; font-style: italic;">Manage creators and reset download history in the <a href="#" id="openSettingsPageLink">addon settings page</a>.</span>
 	</section>
 
 	<script src="js/popup.js"></script>

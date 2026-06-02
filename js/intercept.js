@@ -63,10 +63,8 @@ function resolveCreatorName(post, response) {
 function interceptStreamResponse(details) {
     console.info(`intercepting api request id '${details.requestId}'`);
 
-    let responseDictionary = {};
     let filter = browser.webRequest.filterResponseData(details.requestId);
-    
-    responseDictionary[details.requestId] = "";
+    let responseStr = "";
 
     filter.ondata = event => {
         let decoder = new TextDecoder("utf-8");
@@ -74,9 +72,9 @@ function interceptStreamResponse(details) {
 
         let str = decoder.decode(event.data, {stream: true});
 
-        console.info(`writing '${str.length}' bytes to response dictionary id '${details.requestId}'`);
+        console.info(`writing '${str.length}' bytes to response body for request id '${details.requestId}'`);
 
-        responseDictionary[details.requestId] += str;
+        responseStr += str;
 
         // pass on response to original receiver
         filter.write(encoder.encode(str));
@@ -85,24 +83,21 @@ function interceptStreamResponse(details) {
     // close filter when all data is received
     filter.onstop = () => {
         filter.disconnect();
-        decodeStreamResponse(responseDictionary);
+        decodeStreamResponse(details.requestId, responseStr);
     }
 }
 
-function decodeStreamResponse(responseDictionary) {
-    for (const key in responseDictionary) {
-        if (responseDictionary.hasOwnProperty(key)) {
-            try {
-                responseDictionary[key] = JSON.parse(responseDictionary[key]);
-            } 
-            catch {
-                console.error(`failed to parse response requestId '${key}', responseDictionary[key]:`, responseDictionary[key]);
-                return;
-            }
-            console.log(`response '${key}' parsed successfully`);
-            extractDownloadInfo(responseDictionary[key]);
-        }
+function decodeStreamResponse(requestId, responseStr) {
+    let response;
+    try {
+        response = JSON.parse(responseStr);
     }
+    catch {
+        console.error(`failed to parse response requestId '${requestId}', responseStr:`, responseStr);
+        return;
+    }
+    console.log(`response '${requestId}' parsed successfully`);
+    extractDownloadInfo(response);
 }
 
 // gathers every post object from a JSON:API response, whether it sits in `data`
@@ -122,6 +117,26 @@ function collectPosts(response) {
     if (Array.isArray(response.included))
         response.included.forEach(consider);
     return posts;
+}
+
+// maps every media id referenced by a post relationship (images, audio, attachments,
+// attachments_media) to the creator name, so secondary media that arrives separately in
+// `included` can be attributed to the right creator. relationship `data` is either an array
+// of references or a single reference object; both are handled.
+function mapRelationshipToCreator(relationships, key, name) {
+    let rel = relationships[key];
+    if (!rel || !rel.data) return;
+
+    let refs = rel.data;
+    console.log(`'${key}' found in response post relationships:`, refs);
+
+    if (Array.isArray(refs)) {
+        refs.forEach(ref => { names[ref.id] = name; });
+    } else if (refs.hasOwnProperty('id')) {
+        names[refs.id] = name;
+    } else {
+        console.error(`could not handle '${key}' in response post relationship; data:`, refs);
+    }
 }
 
 // extracts a post's primary media (post_file) and any media links in its text, and records
@@ -186,82 +201,13 @@ function processPost(data, response) {
         });
     }
 
-    // note content creator name for attachments
-    if (
-        data.hasOwnProperty('relationships') &&
-        data.relationships
-    ) {
-        if (
-            data.relationships.hasOwnProperty('images') &&
-            data.relationships.images &&
-            data.relationships.images.hasOwnProperty('data') &&
-            data.relationships.images.data
-        ) {
-            console.log(`'images' found in response post relationships; images:`, data.relationships.images.data);
-            if (Array.isArray(data.relationships.images.data)) {
-                data.relationships.images.data.forEach(dat => {
-                    names[dat.id] = name;
-                });
-            } else if (data.relationships.images.data.hasOwnProperty('id')) {
-                    names[data.relationships.images.data.id] = name;
-            } else {
-                console.error(`could not handle images in response post relationship; images.data: `, data.relationships.images.data);
-            }
-        }
-        if (
-            data.relationships.hasOwnProperty('audio') &&
-            data.relationships.audio &&
-            data.relationships.audio.hasOwnProperty('data') &&
-            data.relationships.audio.data
-        ) {
-            console.log(`'audio' found in response post relationships; audios:`, data.relationships.audio.data);
-            if (Array.isArray(data.relationships.audio.data)) {
-                data.relationships.audio.data.forEach(dat => {
-                    names[dat.id] = name;
-                });
-            } else if (data.relationships.audio.data.hasOwnProperty('id')) {
-                    names[data.relationships.audio.data.id] = name;
-            } else {
-                console.error(`could not handle audio in response post relationship; audio.data: `, data.relationships.audio.data);
-            }
-        }
-        if (
-            data.relationships.hasOwnProperty('attachments') &&
-            data.relationships.attachments &&
-            data.relationships.attachments.hasOwnProperty('data') &&
-            data.relationships.attachments.data
-        ) {
-            console.log(`attachments found in response post relationship: attachments:`, data.relationships.attachments.data);
-            if (Array.isArray(data.relationships.attachments.data)) {
-                data.relationships.attachments.data.forEach(dat => {
-                    names[dat.id] = name;
-                });
-            } else if (data.relationships.attachments.data.hasOwnProperty('id')) {
-                    names[data.relationships.attachments.data.id] = name;
-            } else {
-                console.error(`could not handle attachment in response post relationship; attachments.data: `, data.relationships.attachments.data);
-            }
-        }
-        // home feed / single posts reference attached files (e.g. PDFs) via the newer
-        // 'attachments_media' relationship; map those media ids to the creator too, else
-        // they fall back to unknownCreator in the 'included' media branch below.
-        if (
-            data.relationships.hasOwnProperty('attachments_media') &&
-            data.relationships.attachments_media &&
-            data.relationships.attachments_media.hasOwnProperty('data') &&
-            data.relationships.attachments_media.data
-        ) {
-            console.log(`'attachments_media' found in response post relationship:`, data.relationships.attachments_media.data);
-            if (Array.isArray(data.relationships.attachments_media.data)) {
-                data.relationships.attachments_media.data.forEach(dat => {
-                    names[dat.id] = name;
-                });
-            } else if (data.relationships.attachments_media.data.hasOwnProperty('id')) {
-                    names[data.relationships.attachments_media.data.id] = name;
-            } else {
-                console.error(`could not handle attachments_media in response post relationship; attachments_media.data: `, data.relationships.attachments_media.data);
-            }
-        }
+    // note content creator name for media referenced via relationships. 'attachments_media' is
+    // the newer relationship used by the home feed / single posts for attached files (e.g. PDFs);
+    // without it they would fall back to unknownCreator in the 'included' media branch below.
+    if (data.hasOwnProperty('relationships') && data.relationships) {
+        ['images', 'audio', 'attachments', 'attachments_media'].forEach(key => {
+            mapRelationshipToCreator(data.relationships, key, name);
+        });
     }
 }
 

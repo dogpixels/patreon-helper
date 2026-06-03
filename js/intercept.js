@@ -66,23 +66,26 @@ function interceptStreamResponse(details) {
     let filter = browser.webRequest.filterResponseData(details.requestId);
     let responseStr = "";
 
-    filter.ondata = event => {
-        let decoder = new TextDecoder("utf-8");
-        let encoder = new TextEncoder();
+    // one decoder instance for the whole response so multi-byte characters that
+    // straddle a chunk boundary are reassembled across ondata calls ({stream: true})
+    let decoder = new TextDecoder("utf-8");
 
+    filter.ondata = event => {
         let str = decoder.decode(event.data, {stream: true});
 
         console.info(`writing '${str.length}' bytes to response body for request id '${details.requestId}'`);
 
         responseStr += str;
 
-        // pass on response to original receiver
-        filter.write(encoder.encode(str));
+        // pass the original bytes through unchanged
+        filter.write(event.data);
     }
 
     // close filter when all data is received
     filter.onstop = () => {
         filter.disconnect();
+        // flush any trailing partial character
+        responseStr += decoder.decode();
         decodeStreamResponse(details.requestId, responseStr);
     }
 }

@@ -294,20 +294,21 @@ function findMediaUrls(text) {
     let ret = [];
     let regex = /href=\"([^"]+)\"/gi;
 
-    let matches = regex.exec(text);
+    for (let match of text.matchAll(regex)) {
+        // match[1] is the captured href; match[0] is the whole href="..." string
+        let url = match[1];
 
-    if (matches === null)
-        return ret;
+        // strip fragment/query before reading the extension (same as the caller does)
+        let extMatch = url.split('#')[0].split('?')[0].match(/\.([^\s\.\/]+)$/i);
+        if (extMatch === null)
+            continue;
 
-    console.log("found links in text:", matches);
-
-    matches.forEach(url => {
-        if (mediaExtensions.includes(url.match(/\.([^\s\.]+)$/i)[1]))
+        if (mediaExtensions.includes(extMatch[1].toLowerCase()))
             ret.push(url);
-    });
+    }
 
     console.log("extracted media links from text:", ret);
-    
+
     return ret;
 }
 

@@ -5,7 +5,8 @@
 
 var streamUrls = [
     '*://*.patreon.com/api/stream*',
-    '*://*.patreon.com/api/posts*'
+    '*://*.patreon.com/api/posts*',
+    '*://*.patreon.com/api/launcher/cards*' // home feed; posts/media live in `included`
 ];
 var identifierRegex = /\/post\/\d*\/(\w*)\/|file\?(h\=\d*\&i\=\w*)/;
 var db;
@@ -62,176 +63,165 @@ function resolveCreatorName(post, response) {
 function interceptStreamResponse(details) {
     console.info(`intercepting api request id '${details.requestId}'`);
 
-    let responseDictionary = {};
     let filter = browser.webRequest.filterResponseData(details.requestId);
-    
-    responseDictionary[details.requestId] = "";
+    let responseStr = "";
+
+    // one decoder instance for the whole response so multi-byte characters that
+    // straddle a chunk boundary are reassembled across ondata calls ({stream: true})
+    let decoder = new TextDecoder("utf-8");
 
     filter.ondata = event => {
-        let decoder = new TextDecoder("utf-8");
-        let encoder = new TextEncoder();
-
         let str = decoder.decode(event.data, {stream: true});
 
-        console.info(`writing '${str.length}' bytes to response dictionary id '${details.requestId}'`);
+        console.info(`writing '${str.length}' bytes to response body for request id '${details.requestId}'`);
 
-        responseDictionary[details.requestId] += str;
+        responseStr += str;
 
-        // pass on response to original receiver
-        filter.write(encoder.encode(str));
+        // pass the original bytes through unchanged
+        filter.write(event.data);
     }
 
     // close filter when all data is received
     filter.onstop = () => {
         filter.disconnect();
-        decodeStreamResponse(responseDictionary);
+        // flush any trailing partial character
+        responseStr += decoder.decode();
+        decodeStreamResponse(details.requestId, responseStr);
     }
 }
 
-function decodeStreamResponse(responseDictionary) {
-    for (const key in responseDictionary) {
-        if (responseDictionary.hasOwnProperty(key)) {
-            try {
-                responseDictionary[key] = JSON.parse(responseDictionary[key]);
-            } 
-            catch {
-                console.error(`failed to parse response requestId '${key}', responseDictionary[key]:`, responseDictionary[key]);
-                return;
-            }
-            console.log(`response '${key}' parsed successfully`);
-            extractDownloadInfo(responseDictionary[key]);
+function decodeStreamResponse(requestId, responseStr) {
+    let response;
+    try {
+        response = JSON.parse(responseStr);
+    }
+    catch {
+        console.error(`failed to parse response requestId '${requestId}', responseStr:`, responseStr);
+        return;
+    }
+    console.log(`response '${requestId}' parsed successfully`);
+    extractDownloadInfo(response);
+}
+
+// gathers every post object from a JSON:API response, whether it sits in `data`
+// (creator posts pages) or in `included` (home feed launcher/cards). `data` may be an
+// array or, for a single-post payload, a lone object — both are normalized. de-duped by id.
+function collectPosts(response) {
+    let posts = [];
+    let seen = {};
+    let consider = obj => {
+        if (obj && obj.type === "post" && obj.hasOwnProperty('attributes') && !seen[obj.id]) {
+            seen[obj.id] = true;
+            posts.push(obj);
         }
+    };
+    if (response.hasOwnProperty('data'))
+        (Array.isArray(response.data) ? response.data : [response.data]).forEach(consider);
+    if (Array.isArray(response.included))
+        response.included.forEach(consider);
+    return posts;
+}
+
+// maps every media id referenced by a post relationship (images, audio, attachments,
+// attachments_media) to the creator name, so secondary media that arrives separately in
+// `included` can be attributed to the right creator. relationship `data` is either an array
+// of references or a single reference object; both are handled.
+function mapRelationshipToCreator(relationships, key, name) {
+    let rel = relationships[key];
+    if (!rel || !rel.data) return;
+
+    let refs = rel.data;
+    console.log(`'${key}' found in response post relationships:`, refs);
+
+    if (Array.isArray(refs)) {
+        refs.forEach(ref => { names[ref.id] = name; });
+    } else if (refs.hasOwnProperty('id')) {
+        names[refs.id] = name;
+    } else {
+        console.error(`could not handle '${key}' in response post relationship; data:`, refs);
+    }
+}
+
+// extracts a post's primary media (post_file) and any media links in its text, and records
+// the creator name for each of the post's media ids in names[], so secondary media that
+// arrive separately in `included` can be attributed to the right creator.
+function processPost(data, response) {
+    // resolve the creator name for every post up front, so secondary media can
+    // still be attributed even when the post carries no downloadable post_file
+    // (e.g. collection feeds, where post_file lacks a 'name' and the real images
+    // arrive separately via the 'included' array, looked up through names[])
+    let name = resolveCreatorName(data, response);
+    console.log(`resolved creator name: `, name);
+
+    if (
+        data.attributes.hasOwnProperty('post_file') &&
+        data.attributes.post_file && // might be null
+        data.attributes.post_file.hasOwnProperty('name') &&
+        data.attributes.post_file.hasOwnProperty('url')
+    ) {
+        console.log(`'post_file' found in post`);
+
+        console.log("found media on post:", {
+            name: name,
+            file: data.attributes.post_file.name,
+            url: data.attributes.post_file.url
+        });
+
+        // 07/2020 "Nikofix" for Patreon's odd fetish to slap some wrong file name onto the first url on a post with multiple images
+        if (
+            data.attributes.hasOwnProperty('post_metadata') &&
+            data.attributes.post_metadata && // might be null
+            data.attributes.post_metadata.hasOwnProperty('image_order') &&
+            data.attributes.post_metadata.image_order.length > 1
+        ) {
+            console.warn(`the aforementioned media on post has been identified affected by 07/2020 Nikofix and has been skipped`);
+        }
+        else {
+            addToDownloads(name, baseName(data.attributes.post_file.name), data.attributes.post_file.url, objectIdentifier("media", data.attributes.post_file.media_id));
+        }
+    }
+
+    /* search post text for media links */
+    if (data.attributes.hasOwnProperty('content') && data.attributes.content != null) {
+        console.log(`'content' found in post response; searching for media links; data.attributes.content:`, data.attributes.content);
+        findMediaUrls(data.attributes.content).forEach(url => {
+            console.info(`url found in post content, url:`, url);
+            let file = url.split('/').pop().split('#')[0].split('?')[0];
+            addToDownloads(name, file, url);
+        });
+    }
+
+    // note content creator name for secondary media (post has multiple media)
+    if (
+        data.attributes.hasOwnProperty('post_metadata') &&
+        data.attributes.post_metadata &&
+        data.attributes.post_metadata.hasOwnProperty('image_order') &&
+        data.attributes.post_metadata.image_order
+    ) {
+        console.log(`'post_metadata' found in response; image_order:`, data.attributes.post_metadata.image_order);
+        data.attributes.post_metadata.image_order.forEach(id => {
+            names[id] = name;
+        });
+    }
+
+    // note content creator name for media referenced via relationships. 'attachments_media' is
+    // the newer relationship used by the home feed / single posts for attached files (e.g. PDFs);
+    // without it they would fall back to unknownCreator in the 'included' media branch below.
+    if (data.hasOwnProperty('relationships') && data.relationships) {
+        ['images', 'audio', 'attachments', 'attachments_media'].forEach(key => {
+            mapRelationshipToCreator(data.relationships, key, name);
+        });
     }
 }
 
 function extractDownloadInfo(response) {
     console.info(`scanning response:`, response);
 
-    /* search posts for primary media */
-    if (response.hasOwnProperty('data')) { // /api/posts
-        console.log(`'data' found in response`);
-        response.data.forEach(data => {
-            if (data.type != "post" || !data.hasOwnProperty('attributes')) {
-                return;
-            }
-
-            // resolve the creator name for every post up front, so secondary media can
-            // still be attributed even when the post carries no downloadable post_file
-            // (e.g. collection feeds, where post_file lacks a 'name' and the real images
-            // arrive separately via the 'included' array, looked up through names[])
-            let name = resolveCreatorName(data, response);
-            console.log(`resolved creator name: `, name);
-
-            if (
-                data.attributes.hasOwnProperty('post_file') &&
-                data.attributes.post_file && // might be null
-                data.attributes.post_file.hasOwnProperty('name') &&
-                data.attributes.post_file.hasOwnProperty('url')
-            ) {
-                console.log(`'post_file' found in post`);
-
-                console.log("found media on post:", {
-                    name: name,
-                    file: data.attributes.post_file.name,
-                    url: data.attributes.post_file.url
-                });
-
-                // 07/2020 "Nikofix" for Patreon's odd fetish to slap some wrong file name onto the first url on a post with multiple images
-                if (
-                    data.attributes.hasOwnProperty('post_metadata') &&
-                    data.attributes.post_metadata && // might be null
-                    data.attributes.post_metadata.hasOwnProperty('image_order') &&
-                    data.attributes.post_metadata.image_order.length > 1
-                ) {
-                    console.warn(`the aforementioned media on post has been identified affected by 07/2020 Nikofix and has been skipped`);
-                }
-                else {
-                    addToDownloads(name, baseName(data.attributes.post_file.name), data.attributes.post_file.url, objectIdentifier("media", data.attributes.post_file.media_id));
-                }
-            }
-
-            /* search post text for media links */
-            if (data.attributes.hasOwnProperty('content') && data.attributes.content != null) {
-                console.log(`'content' found in post response; searching for media links; data.attributes.content:`, data.attributes.content);
-                findMediaUrls(data.attributes.content).forEach(url => {
-                    console.info(`url found in post content, url:`, url);
-                    let file = url.split('/').pop().split('#')[0].split('?')[0];
-                    addToDownloads(name, file, url);
-                });
-            }
-
-            // note content creator name for secondary media (post has multiple media)
-            if (
-                data.attributes.hasOwnProperty('post_metadata') &&
-                data.attributes.post_metadata &&
-                data.attributes.post_metadata.hasOwnProperty('image_order') &&
-                data.attributes.post_metadata.image_order
-            ) {
-                console.log(`'post_metadata' found in response; image_order:`, data.attributes.post_metadata.image_order);
-                data.attributes.post_metadata.image_order.forEach(id => {
-                    names[id] = name;
-                });
-            }
-
-            // note content creator name for attachments
-            if (
-                data.hasOwnProperty('relationships') &&
-                data.relationships
-            ) {
-                if (
-                    data.relationships.hasOwnProperty('images') &&
-                    data.relationships.images &&
-                    data.relationships.images.hasOwnProperty('data') &&
-                    data.relationships.images.data
-                ) {
-                    console.log(`'images' found in response post relationships; images:`, data.relationships.images.data);
-                    if (Array.isArray(data.relationships.images.data)) {
-                        data.relationships.images.data.forEach(dat => {
-                            names[dat.id] = name;
-                        });
-                    } else if (data.relationships.images.data.hasOwnProperty('id')) {
-                            names[data.relationships.images.data.id] = name;
-                    } else {
-                        console.error(`could not handle images in response post relationship; images.data: `, data.relationships.images.data);
-                    }
-                }
-                if (
-                    data.relationships.hasOwnProperty('audio') &&
-                    data.relationships.audio &&
-                    data.relationships.audio.hasOwnProperty('data') &&
-                    data.relationships.audio.data
-                ) {
-                    console.log(`'audio' found in response post relationships; audios:`, data.relationships.audio.data);
-                    if (Array.isArray(data.relationships.audio.data)) {
-                        data.relationships.audio.data.forEach(dat => {
-                            names[dat.id] = name;
-                        });
-                    } else if (data.relationships.audio.data.hasOwnProperty('id')) {
-                            names[data.relationships.audio.data.id] = name;
-                    } else {
-                        console.error(`could not handle audio in response post relationship; audio.data: `, data.relationships.audio.data);
-                    }
-                }
-                if (
-                    data.relationships.hasOwnProperty('attachments') &&
-                    data.relationships.attachments &&
-                    data.relationships.attachments.hasOwnProperty('data') &&
-                    data.relationships.attachments.data
-                ) {
-                    console.log(`attachments found in response post relationship: attachments:`, data.relationships.attachments.data);
-                    if (Array.isArray(data.relationships.attachments.data)) {
-                        data.relationships.attachments.data.forEach(dat => {
-                            names[dat.id] = name;
-                        });
-                    } else if (data.relationships.attachments.data.hasOwnProperty('id')) {
-                            names[data.relationships.attachments.data.id] = name;
-                    } else {
-                        exlog.error(`could not handle attachment in response post relationship; attachments.data: `, data.relationships.attachments.data);
-                    }
-                }
-            }
-        });
-    }
+    /* posts live in `data` on creator pages, but in `included` on the home feed
+       (launcher/cards, where `data` only holds launcher-card wrappers). process every
+       post first so names[] (media id -> creator) is populated before the standalone
+       media entries in `included` are read below. */
+    collectPosts(response).forEach(post => processPost(post, response));
 
     /* search stream (home feed) for media */
     if (response.hasOwnProperty('included')) {
@@ -304,20 +294,21 @@ function findMediaUrls(text) {
     let ret = [];
     let regex = /href=\"([^"]+)\"/gi;
 
-    let matches = regex.exec(text);
+    for (let match of text.matchAll(regex)) {
+        // match[1] is the captured href; match[0] is the whole href="..." string
+        let url = match[1];
 
-    if (matches === null)
-        return ret;
+        // strip fragment/query before reading the extension (same as the caller does)
+        let extMatch = url.split('#')[0].split('?')[0].match(/\.([^\s\.\/]+)$/i);
+        if (extMatch === null)
+            continue;
 
-    console.log("found links in text:", matches);
-
-    matches.forEach(url => {
-        if (mediaExtensions.includes(url.match(/\.([^\s\.]+)$/i)[1]))
+        if (mediaExtensions.includes(extMatch[1].toLowerCase()))
             ret.push(url);
-    });
+    }
 
     console.log("extracted media links from text:", ret);
-    
+
     return ret;
 }
 

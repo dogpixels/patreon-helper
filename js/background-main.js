@@ -157,5 +157,8 @@ browser.runtime.onMessage.addListener((request, sender) => {
 
 	switch (request.action) {
 		case "setPageCreator": pageCreator = request.data.creator; console.info(`pageCreator set to "${pageCreator}".`); break;
+		// single post opened directly: content script (js/content/post.js) read the JSON:API
+		// envelope out of __NEXT_DATA__; run it through the same extraction as feed responses
+		case "processPostData": extractDownloadInfo(request.data); break;
 	}
 });

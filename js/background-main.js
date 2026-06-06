@@ -112,6 +112,23 @@ function baseName(name) {
 	return name.split(/[\\/]/).pop();
 }
 
+// turns an arbitrary string (e.g. a post title) into a single safe path segment: drops
+// characters illegal in file paths, control chars and collapses whitespace, then trims and
+// strips trailing dots/spaces (illegal on Windows) and caps the length. returns null when
+// nothing usable remains, so callers can fall back to omitting the segment.
+function sanitizePathSegment(s) {
+	if (!s) return null;
+	let seg = s
+		.replace(/[\\/:*?"<>|]/g, '')   // characters illegal in Windows file paths
+		.replace(/[\x00-\x1f]/g, '')    // control characters
+		.replace(/\s+/g, ' ')           // collapse runs of whitespace
+		.trim()
+		.replace(/[. ]+$/, '');         // Windows forbids trailing dots/spaces on a segment
+	if (seg.length > 100)
+		seg = seg.slice(0, 100).replace(/[. ]+$/, '');
+	return seg.length ? seg : null;
+}
+
 // pulls the file extension from a file name or url (ignores #fragment and ?query), lowercased
 function fileExtensionOf(s) {
 	if (!s) return null;
@@ -142,13 +159,19 @@ function isMediaTypeEnabled(filename, url) {
 	return mediaTypes[type] === true;
 }
 
-// builds the full relative download path for a file. in "byType" mode a media-type
-// subfolder is inserted between the creator folder and the file (<creator>/images/foo.png).
-// fileName is expected to already be a bare file name (see baseName).
-function buildDownloadPath(creator, fileName, url) {
+// builds the full relative download path for a file. in "byType" mode a media-type subfolder
+// is inserted between the creator folder and the file (<creator>/images/foo.png); in "byPost"
+// mode the post title is used instead (<creator>/<post title>/foo.png), falling back to the
+// bare creator folder for posts without a usable title. fileName is expected to already be a
+// bare file name (see baseName).
+function buildDownloadPath(creator, fileName, url, title) {
 	let path = downloadPrefix + creator + "/";
 	if (storageMode === "byType")
 		path += (mediaTypeFolders[getMediaType(fileName, url)] || 'other') + "/";
+	else if (storageMode === "byPost") {
+		let folder = sanitizePathSegment(title);
+		if (folder) path += folder + "/";
+	}
 	return path + fileName;
 }
 

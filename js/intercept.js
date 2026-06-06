@@ -11,6 +11,9 @@ var streamUrls = [
 var identifierRegex = /\/post\/\d*\/(\w*)\/|file\?(h\=\d*\&i\=\w*)/;
 var db;
 var names = {};
+// parallel to names[]: media id -> the title of the post the media belongs to, so media that
+// arrive separately in `included` can be filed under their post's folder ("byPost" mode).
+var titles = {};
 
 // extracts the creator's vanity slug from any patreon profile/checkout/join url
 function extractVanityFromUrl(url) {
@@ -126,7 +129,7 @@ function collectPosts(response) {
 // attachments_media) to the creator name, so secondary media that arrives separately in
 // `included` can be attributed to the right creator. relationship `data` is either an array
 // of references or a single reference object; both are handled.
-function mapRelationshipToCreator(relationships, key, name) {
+function mapRelationshipToCreator(relationships, key, name, title) {
     let rel = relationships[key];
     if (!rel || !rel.data) return;
 
@@ -134,9 +137,13 @@ function mapRelationshipToCreator(relationships, key, name) {
     console.log(`'${key}' found in response post relationships:`, refs);
 
     if (Array.isArray(refs)) {
-        refs.forEach(ref => { names[ref.id] = name; });
+        refs.forEach(ref => {
+            names[ref.id] = name;
+            titles[ref.id] = title;
+        });
     } else if (refs.hasOwnProperty('id')) {
         names[refs.id] = name;
+        titles[refs.id] = title;
     } else {
         console.error(`could not handle '${key}' in response post relationship; data:`, refs);
     }
@@ -152,6 +159,10 @@ function processPost(data, response) {
     // arrive separately via the 'included' array, looked up through names[])
     let name = resolveCreatorName(data, response);
     console.log(`resolved creator name: `, name);
+
+    // the post title travels alongside the creator name: filed into titles[] wherever names[]
+    // is set, so standalone media in `included` can be attributed to their post folder below.
+    let title = data.attributes && data.attributes.title;
 
     if (
         data.attributes.hasOwnProperty('post_file') &&
@@ -177,7 +188,7 @@ function processPost(data, response) {
             console.warn(`the aforementioned media on post has been identified affected by 07/2020 Nikofix and has been skipped`);
         }
         else {
-            addToDownloads(name, baseName(data.attributes.post_file.name), data.attributes.post_file.url, objectIdentifier("media", data.attributes.post_file.media_id));
+            addToDownloads(name, baseName(data.attributes.post_file.name), data.attributes.post_file.url, objectIdentifier("media", data.attributes.post_file.media_id), title);
         }
     }
 
@@ -187,7 +198,7 @@ function processPost(data, response) {
         findMediaUrls(data.attributes.content).forEach(url => {
             console.info(`url found in post content, url:`, url);
             let file = url.split('/').pop().split('#')[0].split('?')[0];
-            addToDownloads(name, file, url);
+            addToDownloads(name, file, url, undefined, title);
         });
     }
 
@@ -201,6 +212,7 @@ function processPost(data, response) {
         console.log(`'post_metadata' found in response; image_order:`, data.attributes.post_metadata.image_order);
         data.attributes.post_metadata.image_order.forEach(id => {
             names[id] = name;
+            titles[id] = title;
         });
     }
 
@@ -209,7 +221,7 @@ function processPost(data, response) {
     // without it they would fall back to unknownCreator in the 'included' media branch below.
     if (data.hasOwnProperty('relationships') && data.relationships) {
         ['images', 'audio', 'attachments', 'attachments_media'].forEach(key => {
-            mapRelationshipToCreator(data.relationships, key, name);
+            mapRelationshipToCreator(data.relationships, key, name, title);
         });
     }
 }
@@ -263,7 +275,7 @@ function extractDownloadInfo(response) {
                     console.warn(`file_name was null, replaced it by '${incl.attributes.file_name}'`);
                 }
 
-                addToDownloads(name, baseName(incl.attributes.file_name), incl.attributes.download_url, objectIdentifier("media", incl.id));
+                addToDownloads(name, baseName(incl.attributes.file_name), incl.attributes.download_url, objectIdentifier("media", incl.id), titles[incl.id]);
             }
 
             // attachments
@@ -284,7 +296,7 @@ function extractDownloadInfo(response) {
                     url: incl.attributes.url
                 });
 
-                addToDownloads(name, baseName(incl.attributes.name), incl.attributes.url, objectIdentifier("attachment", incl.id));
+                addToDownloads(name, baseName(incl.attributes.name), incl.attributes.url, objectIdentifier("attachment", incl.id), titles[incl.id]);
             }
         });
     }
@@ -312,12 +324,13 @@ function findMediaUrls(text) {
     return ret;
 }
 
-async function addToDownloads(creator, fileName, url, identifier) {
+async function addToDownloads(creator, fileName, url, identifier, title) {
     registerCreator(creator);
 
     // build the on-disk path here so callers only pass the bare file name (and don't
-    // have to repeat creator/url for buildDownloadPath on top of passing them to us)
-    let filename = buildDownloadPath(creator, fileName, url);
+    // have to repeat creator/url for buildDownloadPath on top of passing them to us).
+    // title is only consumed in "byPost" storage mode; ignored otherwise.
+    let filename = buildDownloadPath(creator, fileName, url, title);
 
     console.info(`Queueing: creator: "${creator}", filename: "${filename}", url: "${url}"`);
 

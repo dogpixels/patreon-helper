@@ -27,6 +27,7 @@ var mediaTypeCheckboxes = {
 };
 var storageModeFlat = document.getElementById("storageModeFlat");
 var storageModeByType = document.getElementById("storageModeByType");
+var storageModeByPost = document.getElementById("storageModeByPost");
 
 // the group checkboxes only matter in "selected" mode; grey them out otherwise
 function updateMediaTypeGroupListState() {
@@ -64,9 +65,10 @@ browser.runtime.getBackgroundPage().then((backgroundContext) => {
 	}
 
 	// folder structure
-	(backgroundContext.storageMode === "byType" ? storageModeByType : storageModeFlat).checked = true;
+	let storageModeRadios = { flat: storageModeFlat, byType: storageModeByType, byPost: storageModeByPost };
+	(storageModeRadios[backgroundContext.storageMode] || storageModeFlat).checked = true;
 
-	[storageModeFlat, storageModeByType].forEach(radio => {
+	[storageModeFlat, storageModeByType, storageModeByPost].forEach(radio => {
 		radio.addEventListener('change', (event) => {
 			backgroundContext.storageMode = event.target.value;
 			backgroundContext.updateSettingsStorage();

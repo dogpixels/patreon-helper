@@ -115,6 +115,9 @@
 		<h1>Patreon Helper</h1>
 		<h2>News</h2>
 		<p>
+			<strong>06/2026 (2.5)</strong> Media is now also grabbed from directly-opened single posts, and downloads can be organized into per-post folders.
+		</p>
+		<p>
 			<strong>06/2026 (2.4)</strong> Content from the home feed is collected again properly, plus a fix for media links in post text.
 		</p>
 		<p>
@@ -181,6 +184,10 @@
 			<label>
 				<input type="radio" name="storageMode" id="storageModeByType" value="byType" />
 				<span><strong>By file type</strong>: Sort files into type subfolders (<code>patreon/&lt;creator&gt;/images</code>, <code>/videos</code>, <code>/audio</code>, <code>/documents</code>, <code>/fonts</code>, <code>/archives</code>, <code>/other</code>).</span>
+			</label>
+			<label>
+				<input type="radio" name="storageMode" id="storageModeByPost" value="byPost" />
+				<span><strong>By post</strong>: Group files by the post they came from (<code>patreon/&lt;creator&gt;/&lt;post title&gt;/file</code>). Posts without a title go directly into the creator's folder.</span>
 			</label>
 		</article>
 		<article>
